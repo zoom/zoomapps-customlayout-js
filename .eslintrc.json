@@ -17,6 +17,14 @@
     "sourceType": "module"
   },
   "ignorePatterns": ["public/js/vendor/*.js"],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js"],
+        "moduleDirectory": ["node_modules", "/js/lib"]
+      }
+    }
+  },
   "rules": {
     "import/extensions": [
       "error",
