@@ -7,18 +7,12 @@ class ImmersiveApp {
     #user = {
         participantId: null,
         role: null,
-        name: null,
+        screenName: null,
     };
 
     #video = {
         width: 0,
         height: 0,
-    };
-
-    #device = {
-        pixelRatio: window.devicePixelRatio,
-        width: window.innerWidth * window.devicePixelRatio,
-        height: window.innerHeight * window.devicePixelRatio,
     };
 
     #drawnImages = [];
@@ -31,6 +25,8 @@ class ImmersiveApp {
         inMeeting: 'inMeeting',
         inImmersive: 'inImmersive',
     };
+
+    #timer = null;
 
     constructor() {
         // use this class as a singleton
@@ -68,20 +64,6 @@ class ImmersiveApp {
                 }
             });
 
-            window.addEventListener(
-                'resize',
-                this.#debounce(() => {
-                    const pixelRatio = window.devicePixelRatio;
-                    this.#device = {
-                        pixelRatio,
-                        width: window.innerWidth * pixelRatio,
-                        height: window.innerHeight * pixelRatio,
-                    };
-
-                    this.#redraw();
-                }, 250)
-            );
-
             ImmersiveApp.#instance = this;
         }
 
@@ -96,10 +78,20 @@ class ImmersiveApp {
         return this.#video;
     }
 
-    set video(v) {
-        this.#video.width = v.width;
-        this.#video.height = v.height;
-        this.#video.pixelRatio = v.pixelRatio;
+    set video({ width, height }) {
+        this.#video = {
+            width,
+            height,
+        };
+    }
+
+    get device() {
+        const pixelRatio = window.devicePixelRatio;
+        return {
+            pixelRatio,
+            width: window.innerWidth * pixelRatio,
+            height: window.innerHeight * pixelRatio,
+        };
     }
 
     get participants() {
@@ -110,10 +102,22 @@ class ImmersiveApp {
         return this.#user;
     }
 
-    set user(v) {
-        this.#user.participantId = v.participantId;
-        this.#user.role = v.role;
-        this.#user.name = v.screenName;
+    set user({ participantId, role, screenName }) {
+        this.#user = {
+            role,
+            screenName,
+            participantId,
+        };
+    }
+
+    debounce(fn, ms) {
+        return () => {
+            clearTimeout(this.#timer);
+            this.#timer = setTimeout(() => {
+                this.#timer = null;
+                fn.apply(this, arguments);
+            }, ms);
+        };
     }
 
     async init() {
@@ -137,8 +141,8 @@ class ImmersiveApp {
         console.debug('Configuration', conf);
 
         this.video = conf.media.video;
-        const data = await this.sdk.getMeetingParticipants();
-        this.#participants = data.participants;
+        const { participants } = await this.sdk.getMeetingParticipants();
+        this.#participants = participants;
 
         return conf;
     }
@@ -153,7 +157,7 @@ class ImmersiveApp {
         console.debug('Current User', this.user);
 
         const isNotHost = this.user.role !== 'host';
-        const isNotMeeting = this.context !== this.#contexts.inMeeting;
+        const isNotMeeting = this.#context !== this.#contexts.inMeeting;
 
         if (isNotHost || isNotMeeting) return;
 
@@ -191,6 +195,22 @@ class ImmersiveApp {
         return participantId;
     }
 
+    async drawImage(options) {
+        const { imageId } = await this.sdk.drawImage(options);
+        console.log('imageId', imageId);
+        this.#drawnImages.push(imageId);
+
+        return imageId;
+    }
+
+    async clearAllImages() {
+        while (this.#drawnImages.length > 0) {
+            const imageId = this.#drawnImages.pop();
+            console.debug('clearing image', imageId);
+            await this.sdk.clearImage({ imageId });
+        }
+    }
+
     inviteAllParticipants() {
         return this.sdk.sendAppInvitationToAllParticipants();
     }
@@ -202,21 +222,9 @@ class ImmersiveApp {
             this.sdk.clearParticipant({ participantId });
         }
     }
-
-    #debounce(fn, ms) {
-        let timer;
-        return () => {
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(() => {
-                timer = null;
-                fn.apply(this, arguments);
-            }, ms);
-        };
-    }
 }
 
 // Export a singleton of the class
 const instance = new ImmersiveApp();
 Object.freeze(instance);
-
 export default instance;
