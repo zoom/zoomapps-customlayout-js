@@ -17,7 +17,7 @@ class ImmersiveApp {
 
     #drawnImages = [];
     #drawnParticipants = [];
-    #participants = new Set();
+    #participants = [];
 
     #context = '';
 
@@ -46,8 +46,10 @@ class ImmersiveApp {
                         screenName: part.screenName,
                     };
 
-                    if (part.status === 'join') this.#participants.add(p);
-                    else this.#participants.delete(p);
+                    const idx = this.#participants.indexOf(p);
+
+                    if (part.status === 'join') this.#participants.push(p);
+                    else if (idx !== -1) this.#participants.splice(idx, 1);
                 }
             });
 
@@ -172,6 +174,18 @@ class ImmersiveApp {
             await this.sdk.clearImage({ imageId });
             console.debug('cleared image', imageId);
         }
+    }
+    async clearAllParticipants() {
+        while (this.#drawnParticipants.length) {
+            const imageId = this.#drawnParticipants.pop();
+            await this.sdk.clearParticipant({ imageId });
+            console.debug('cleared image', imageId);
+        }
+    }
+
+    async clearScreen() {
+        await this.clearAllParticipants();
+        await this.clearAllImages();
     }
 
     inviteAllParticipants() {

@@ -73,6 +73,14 @@ function getImageData(ctx, width, height) {
 try {
     await app.init();
     await app.start();
+
+    /*    app.sdk.callZoomApi('connect')
+    await app.sdk.addEventListener('onMessage', async ({action}) => {
+        if (action === 'ended') {
+            await app.sdk.callZoomApi("postMessage", {exampleData: "some data to sync"});
+            app.sdk.callZoomApi("endSyncData", {});
+        }
+    })*/
 } catch (e) {
     console.error(e);
 }
@@ -85,44 +93,38 @@ window.addEventListener(
             height: innerHeight * devicePixelRatio,
         };
 
-        const width = Math.ceil(device.width / 2);
-        const height = Math.ceil(device.height / 2);
+        // We can't draw a full width HIDPI canvas so we'll draw quadrants.
+        const width = device.width / 2;
+        const height = device.height / 2;
 
-        const x1 = Math.floor(device.width / (devicePixelRatio * 2));
-        const y1 = Math.floor(device.height / (devicePixelRatio * 2));
+        const x1 = device.width / (devicePixelRatio * 2);
+        const y1 = device.height / (devicePixelRatio * 2);
 
         try {
-            await app.clearAllImages();
+            await app.clearScreen();
 
             for (let i = 1; i <= 4; i++) {
                 const ctx = createCanvas(width, height);
                 drawBackground(ctx, width, height);
 
+                const w = Math.floor(width * 0.85);
+                const h = Math.floor((w * 9) / 16);
+
+                // We need to divide out the scaling ratio for drawing participants
+                const vWidth = Math.floor(w / devicePixelRatio);
+                const vHeight = Math.floor(h / devicePixelRatio);
+
                 let x, y;
                 x = y = 0;
 
-                let w = width * 0.85;
-                let h = (w * 9) / 16;
-
-                const padding = 5 * devicePixelRatio;
+                const padding = 10 * devicePixelRatio;
                 let xPad = Math.max(width - (w + padding), 0);
                 let yPad = Math.max(height - (h + padding), 0);
 
                 switch (i) {
-                    case 1:
-                        await app.drawParticipant({
-                            x: `${xPad}px`,
-                            y: `${yPad}px`,
-                            participantId:
-                                i === 1 ? app.user.participantId : null,
-                            width: `${w}px`,
-                            height: `${h}px`,
-                            zIndex: 1,
-                        });
-                        break;
                     case 2:
-                        xPad = padding;
                         x = x1;
+                        xPad = padding;
                         break;
                     case 3:
                         yPad = padding;
@@ -134,13 +136,14 @@ window.addEventListener(
                         x = x1;
                         y = y1;
                         break;
-                    default:
-                        break;
                 }
+
+                let xPos = Math.floor(x + xPad / devicePixelRatio);
+                let yPos = Math.floor(y + yPad / devicePixelRatio);
 
                 clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
 
-                if (i === 4) await drawLogo(ctx, w - x, h - y, 128, 256);
+                if (i === 4) await drawLogo(ctx, x - w, y - h, 256, 128);
 
                 const imageData = await getImageData(ctx, width, height);
 
@@ -150,6 +153,24 @@ window.addEventListener(
                     y: `${y}px`,
                     zIndex: i + 1,
                 });
+
+                console.log('vWidth', vWidth);
+                console.log('vHeight', vHeight);
+                console.log('xPos', xPos);
+                console.log('yPos', yPos);
+
+                const p = app.participants[i - 1];
+
+                if (p) {
+                    await app.drawParticipant({
+                        x: `${xPos}px`,
+                        y: `${yPos}px`,
+                        participantId: p.participantId,
+                        width: `${vWidth}px`,
+                        height: `${vHeight}px`,
+                        zIndex: i,
+                    });
+                }
             }
         } catch (e) {
             console.error(e);
