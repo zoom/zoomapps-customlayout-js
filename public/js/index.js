@@ -19,7 +19,7 @@ function drawBackground(ctx, width, height) {
 
 function clipRoundRect(ctx, x, y, width, height, radius) {
     ctx.save();
-    ctx.lineWidth = 10;
+    //ctx.lineWidth = 10;
     ctx.strokeStyle = 'rgba(0,0,0,0)';
     ctx.fillStyle = '#2D8CFF';
 
@@ -91,33 +91,41 @@ window.addEventListener(
         try {
             await app.clearAllImages();
 
-            for (let i = 0; i < 4; i++) {
+            for (let i = 1; i <= 4; i++) {
                 const ctx = createCanvas(width, height);
                 drawBackground(ctx, width, height);
-
-                let xPad = 50 * devicePixelRatio;
-                let yPad = 25 * devicePixelRatio;
 
                 let x, y;
                 x = y = 0;
 
-                let w = width * 0.9;
+                let w = width;
                 let h = (w * 9) / 16;
 
-                const pad = 10 * devicePixelRatio;
+                let xPad = Math.floor(0.1 * w);
+                let yPad = Math.floor(0.05 * h);
+                const pad = Math.floor(0.01 * width);
 
                 switch (i) {
-                    case 0:
-                        break;
                     case 1:
+                        await app.drawParticipant({
+                            x: `${x + xPad}px`,
+                            y: `${y + yPad}px`,
+                            participantId:
+                                i === 1 ? app.user.participantId : null,
+                            width: `${w}px`,
+                            height: `${h}px`,
+                            zIndex: 1,
+                        });
+                        break;
+                    case 2:
                         xPad = pad;
                         x = x1;
                         break;
-                    case 2:
+                    case 3:
                         yPad = 0;
                         y = y1;
                         break;
-                    case 3:
+                    case 4:
                         xPad = pad;
                         yPad = 0;
                         x = x1;
@@ -135,23 +143,13 @@ window.addEventListener(
                     imageData,
                     x: `${x}px`,
                     y: `${y}px`,
-                    zIndex: i + 2,
+                    zIndex: i + 1,
                 });
-
-                const opts = {
-                    x,
-                    y,
-                    participantId: i === 0 ? app.user.participantId : null,
-                    width: `${w}px`,
-                    height: `${h}px`,
-                };
-
-                if (opts.participantId) await app.drawParticipant(opts);
             }
         } catch (e) {
             console.error(e);
         }
-    }, 1000)
+    }, 250)
 );
 
 /*
