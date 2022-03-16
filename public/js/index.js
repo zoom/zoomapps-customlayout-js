@@ -95,32 +95,37 @@ window.addEventListener(
                 const ctx = createCanvas(width, height);
                 drawBackground(ctx, width, height);
 
-                let xPad = 75 * devicePixelRatio;
-                let yPad = 50 * devicePixelRatio;
+                let xPad = 50 * devicePixelRatio;
+                let yPad = 25 * devicePixelRatio;
+
                 let x, y;
                 x = y = 0;
+
+                let w = width * 0.9;
+                let h = (w * 9) / 16;
+
+                const pad = 10 * devicePixelRatio;
 
                 switch (i) {
                     case 0:
                         break;
                     case 1:
-                        xPad = 50 * devicePixelRatio;
+                        xPad = pad;
                         x = x1;
                         break;
                     case 2:
+                        yPad = 0;
                         y = y1;
                         break;
                     case 3:
-                        xPad = 50 * devicePixelRatio;
+                        xPad = pad;
+                        yPad = 0;
                         x = x1;
                         y = y1;
                         break;
                     default:
                         break;
                 }
-
-                const w = width - xPad;
-                const h = height - yPad;
 
                 clipRoundRect(ctx, xPad, yPad, w, h, 25);
 
@@ -146,7 +151,7 @@ window.addEventListener(
         } catch (e) {
             console.error(e);
         }
-    })
+    }, 1000)
 );
 
 /*
