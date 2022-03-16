@@ -17,7 +17,7 @@ class ImmersiveApp {
 
     #drawnImages = [];
     #drawnParticipants = [];
-    #participants = [];
+    #participants = new Set();
 
     #context = '';
 
@@ -39,28 +39,15 @@ class ImmersiveApp {
             );
 
             this.sdk.onParticipantChange(({ participants }) => {
-                const join = 'join';
-                const leave = 'leave';
                 for (const part of participants) {
                     const p = {
                         participantId: part.participantId,
                         role: part.role,
                         screenName: part.screenName,
                     };
-                    const i = this.#participants.indexOf(p);
 
-                    if (i !== -1) {
-                        switch (p.status) {
-                            case join:
-                                this.#participants[i] = p;
-                                break;
-                            case leave:
-                                this.#participants.splice(i, 1);
-                                break;
-                        }
-                    } else if (p.status === join) {
-                        this.#participants.push(p);
-                    }
+                    if (part.status === 'join') this.#participants.add(p);
+                    else this.#participants.delete(p);
                 }
             });
 
@@ -82,15 +69,6 @@ class ImmersiveApp {
         this.#video = {
             width,
             height,
-        };
-    }
-
-    get device() {
-        const pixelRatio = window.devicePixelRatio;
-        return {
-            pixelRatio,
-            width: window.innerWidth * pixelRatio,
-            height: window.innerHeight * pixelRatio,
         };
     }
 
@@ -172,33 +150,18 @@ class ImmersiveApp {
     }
 
     async drawParticipant(options) {
-        const {
-            participantId = this.#user.participantId,
-            x = '0px',
-            y = '0px',
-            width = '100%',
-            height = '100%',
-            zIndex = 1,
-        } = options;
+        const res = await this.sdk.drawParticipant(options);
 
-        await this.sdk.drawParticipant({
-            participantId,
-            x,
-            y,
-            width,
-            height,
-            zIndex,
-        });
+        this.#drawnParticipants.push(options);
 
-        this.#drawnParticipants.push(participantId);
-
-        return participantId;
+        return res;
     }
 
     async drawImage(options) {
         const { imageId } = await this.sdk.drawImage(options);
-        console.log('imageId', imageId);
+
         this.#drawnImages.push(imageId);
+        console.debug('image drawn', imageId);
 
         return imageId;
     }
@@ -206,7 +169,6 @@ class ImmersiveApp {
     async clearAllImages() {
         while (this.#drawnImages.length > 0) {
             const imageId = this.#drawnImages.pop();
-            console.debug('clearing image', imageId);
             await this.sdk.clearImage({ imageId });
         }
     }
@@ -215,7 +177,7 @@ class ImmersiveApp {
         return this.sdk.sendAppInvitationToAllParticipants();
     }
 
-    #redraw() {
+    async #redraw() {
         for (const p of this.#drawnParticipants) {
             const { participantId } = p;
             console.log(p);

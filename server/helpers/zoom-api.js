@@ -122,5 +122,5 @@ export function getDeeplink(token) {
             verified: 1,
             role_id: 0,
         }),
-    }).then((data) => Promise.resolve(data.deeplink));
+    }).then(({ deeplink }) => Promise.resolve(deeplink));
 }

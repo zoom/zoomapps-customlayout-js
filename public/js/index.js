@@ -1,24 +1,69 @@
 // eslint-disable-next-line import/no-unresolved
 import app from '/js/lib/immersive-app.js';
 
-function getRectImage(width, height, fillStyle, strokeStyle) {
-    return new Promise((resolve, reject) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
+function createCanvas(width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas.getContext('2d');
+}
 
-        if (fillStyle) {
-            ctx.fillStyle = fillStyle;
-            ctx.fillRect(0, 0, width, height);
+function drawBackground(ctx, width, height) {
+    ctx.save();
+
+    ctx.fillStyle = '#2D8CFF';
+
+    ctx.rect(0, 0, width, height);
+    ctx.fill();
+}
+
+function clipRoundRect(ctx, x, y, width, height, radius) {
+    ctx.save();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = 'rgba(0,0,0,0)';
+    ctx.fillStyle = '#2D8CFF';
+
+    if (typeof radius === 'undefined') {
+        radius = 5;
+    }
+
+    if (typeof radius === 'number') {
+        radius = { tl: radius, tr: radius, br: radius, bl: radius };
+    } else {
+        const defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
+        for (let side in defaultRadius) {
+            radius[side] = radius[side] || defaultRadius[side];
         }
-        if (strokeStyle) {
-            ctx.strokeStyle = strokeStyle;
-            ctx.strokeRect(0, 0, width, height);
-        }
+    }
+
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + width - radius.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    ctx.lineTo(x + width, y + height - radius.br);
+    ctx.quadraticCurveTo(
+        x + width,
+        y + height,
+        x + width - radius.br,
+        y + height
+    );
+    ctx.lineTo(x + radius.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.stroke();
+    ctx.fill();
+    ctx.closePath();
+    ctx.clip();
+    ctx.restore();
+}
+
+function getImageData(ctx, width, height) {
+    return new Promise((resolve, reject) => {
         const imageData = ctx.getImageData(0, 0, width, height);
-        //console.log("imageData:", imageData);
-        imageData ? resolve(imageData) : reject('Error');
+        imageData ? resolve(imageData) : reject(`imageData is invalid`);
     });
 }
 
@@ -32,60 +77,72 @@ try {
 window.addEventListener(
     'resize',
     app.debounce(async () => {
+        const device = {
+            width: innerWidth * devicePixelRatio,
+            height: innerHeight * devicePixelRatio,
+        };
+
+        const width = Math.floor(device.width / 2);
+        const height = Math.floor(device.height / 2);
+
+        const x1 = Math.floor(device.width / (devicePixelRatio * 2));
+        const y1 = Math.floor(device.height / (devicePixelRatio * 2));
+
         try {
             await app.clearAllImages();
 
-            const w = app.device.width / 2;
-            const h = app.device.height / 2;
-
-            const quadrants = [];
-
             for (let i = 0; i < 4; i++) {
+                const ctx = createCanvas(width, height);
+                drawBackground(ctx, width, height);
+
+                let xPad = 75 * devicePixelRatio;
+                let yPad = 50 * devicePixelRatio;
                 let x, y;
                 x = y = 0;
-                let color = 'Blue';
-
-                const x1 = Math.floor(
-                    app.device.width / (app.device.pixelRatio * 2)
-                );
-                const y1 = Math.floor(
-                    app.device.height / (app.device.pixelRatio * 2)
-                );
 
                 switch (i) {
+                    case 0:
+                        break;
                     case 1:
+                        xPad = 50 * devicePixelRatio;
                         x = x1;
-                        color = 'Black';
                         break;
                     case 2:
                         y = y1;
-                        color = 'Red';
                         break;
                     case 3:
+                        xPad = 50 * devicePixelRatio;
                         x = x1;
                         y = y1;
-                        color = 'Yellow';
                         break;
                     default:
                         break;
                 }
 
-                console.log(i);
-                const imageData = await getRectImage(w, h, color);
+                const w = width - xPad;
+                const h = height - yPad;
 
-                const data = {
+                clipRoundRect(ctx, xPad, yPad, w, h, 25);
+
+                const imageData = await getImageData(ctx, width, height);
+
+                await app.drawImage({
                     imageData,
                     x: `${x}px`,
                     y: `${y}px`,
-                    zIndex: i,
+                    zIndex: i + 2,
+                });
+
+                const opts = {
+                    x,
+                    y,
+                    participantId: i === 0 ? app.user.participantId : null,
+                    width: `${w}px`,
+                    height: `${h}px`,
                 };
-                console.log(data);
-                quadrants.push(data);
+
+                if (opts.participantId) await app.drawParticipant(opts);
             }
-
-            console.log(`${w}x${h}`);
-
-            for (const q of quadrants) await app.drawImage(q);
         } catch (e) {
             console.error(e);
         }
