@@ -167,9 +167,10 @@ class ImmersiveApp {
     }
 
     async clearAllImages() {
-        while (this.#drawnImages.length > 0) {
+        while (this.#drawnImages.length) {
             const imageId = this.#drawnImages.pop();
             await this.sdk.clearImage({ imageId });
+            console.debug('cleared image', imageId);
         }
     }
 

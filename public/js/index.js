@@ -19,7 +19,7 @@ function drawBackground(ctx, width, height) {
 
 function clipRoundRect(ctx, x, y, width, height, radius) {
     ctx.save();
-    //ctx.lineWidth = 10;
+    //ctx.lineWidth = 75;
     ctx.strokeStyle = 'rgba(0,0,0,0)';
     ctx.fillStyle = '#2D8CFF';
 
@@ -98,18 +98,18 @@ window.addEventListener(
                 let x, y;
                 x = y = 0;
 
-                let w = width;
+                let w = width * 0.95;
                 let h = (w * 9) / 16;
 
-                let xPad = Math.floor(0.1 * w);
-                let yPad = Math.floor(0.05 * h);
-                const pad = Math.floor(0.01 * width);
+                const padding = 10 * devicePixelRatio;
+                let xPad = width - w;
+                let yPad = height - h;
 
                 switch (i) {
                     case 1:
                         await app.drawParticipant({
-                            x: `${x + xPad}px`,
-                            y: `${y + yPad}px`,
+                            x: `${xPad}px`,
+                            y: `${yPad}px`,
                             participantId:
                                 i === 1 ? app.user.participantId : null,
                             width: `${w}px`,
@@ -118,16 +118,16 @@ window.addEventListener(
                         });
                         break;
                     case 2:
-                        xPad = pad;
+                        xPad = padding;
                         x = x1;
                         break;
                     case 3:
-                        yPad = 0;
+                        yPad = padding;
                         y = y1;
                         break;
                     case 4:
-                        xPad = pad;
-                        yPad = 0;
+                        xPad = padding;
+                        yPad = padding;
                         x = x1;
                         y = y1;
                         break;
@@ -149,7 +149,7 @@ window.addEventListener(
         } catch (e) {
             console.error(e);
         }
-    }, 250)
+    }, 1000)
 );
 
 /*
