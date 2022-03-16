@@ -154,7 +154,7 @@ class ImmersiveApp {
     async drawParticipant(options) {
         const res = await this.sdk.drawParticipant(options);
 
-        this.#drawnParticipants.push(options);
+        this.#drawnParticipants.push(options.participantId);
 
         return res;
     }
@@ -175,11 +175,13 @@ class ImmersiveApp {
             console.debug('cleared image', imageId);
         }
     }
+
     async clearAllParticipants() {
         while (this.#drawnParticipants.length) {
-            const imageId = this.#drawnParticipants.pop();
-            await this.sdk.clearParticipant({ imageId });
-            console.debug('cleared image', imageId);
+            const participantId = this.#drawnParticipants.pop();
+            console.log('participandId', participantId);
+            await this.sdk.clearParticipant({ participantId });
+            console.debug('cleared participant', participantId);
         }
     }
 

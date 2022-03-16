@@ -110,10 +110,6 @@ window.addEventListener(
                 const w = Math.floor(width * 0.85);
                 const h = Math.floor((w * 9) / 16);
 
-                // We need to divide out the scaling ratio for drawing participants
-                const vWidth = Math.floor(w / devicePixelRatio);
-                const vHeight = Math.floor(h / devicePixelRatio);
-
                 let x, y;
                 x = y = 0;
 
@@ -138,12 +134,9 @@ window.addEventListener(
                         break;
                 }
 
-                let xPos = Math.floor(x + xPad / devicePixelRatio);
-                let yPos = Math.floor(y + yPad / devicePixelRatio);
-
                 clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
 
-                if (i === 4) await drawLogo(ctx, x - w, y - h, 256, 128);
+                if (i === 4) await drawLogo(ctx, 0, 0, 256, 128);
 
                 const imageData = await getImageData(ctx, width, height);
 
@@ -154,10 +147,12 @@ window.addEventListener(
                     zIndex: i + 1,
                 });
 
-                console.log('vWidth', vWidth);
-                console.log('vHeight', vHeight);
-                console.log('xPos', xPos);
-                console.log('yPos', yPos);
+                // We need to divide out the scaling ratio for drawing participants
+                const vWidth = Math.floor(w / devicePixelRatio);
+                const vHeight = Math.floor(h / devicePixelRatio);
+
+                const xPos = Math.floor(x + xPad / devicePixelRatio);
+                const yPos = Math.floor(y + yPad / devicePixelRatio);
 
                 const p = app.participants[i - 1];
 
