@@ -38,21 +38,6 @@ class ImmersiveApp {
                 ({ media: video }) => (this.video = video)
             );
 
-            this.sdk.onParticipantChange(({ participants }) => {
-                for (const part of participants) {
-                    const p = {
-                        participantId: part.participantId,
-                        role: part.role,
-                        screenName: part.screenName,
-                    };
-
-                    const idx = this.#participants.indexOf(p);
-
-                    if (part.status === 'join') this.#participants.push(p);
-                    else if (idx !== -1) this.#participants.splice(idx, 1);
-                }
-            });
-
             ImmersiveApp.#instance = this;
         }
 
@@ -72,10 +57,6 @@ class ImmersiveApp {
             width,
             height,
         };
-    }
-
-    get participants() {
-        return this.#participants;
     }
 
     get user() {

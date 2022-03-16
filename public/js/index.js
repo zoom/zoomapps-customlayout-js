@@ -3,6 +3,9 @@ import app from '/js/lib/immersive-app.js';
 
 const zoomBlue = '#2D8CFF';
 
+const allParticipants = [];
+const shownParticipants = [];
+
 function createCanvas(width, height) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -56,8 +59,10 @@ function loadImage(src) {
     });
 }
 
-async function drawLogo(ctx, x, y, width, height) {
+async function drawLogo(ctx, x, y, scale) {
     const logo = await loadImage('/img/zoom.png');
+    const width = logo.width * scale;
+    const height = logo.height * scale;
     ctx.save();
     ctx.drawImage(logo, x, y, width, height);
     ctx.restore();
@@ -70,150 +75,140 @@ function getImageData(ctx, width, height) {
     });
 }
 
+async function drawQuadrant(idx, width, height, xCenter, yCenter) {
+    const ctx = createCanvas(width, height);
+    drawBackground(ctx, width, height);
+
+    const w = Math.floor(width * 0.85);
+    const h = Math.floor((w * 9) / 16);
+
+    let x, y;
+    x = y = 0;
+
+    const padding = 10 * devicePixelRatio;
+    let xPad = Math.max(width - (w + padding), 0);
+    let yPad = Math.max(height - (h + padding), 0);
+
+    switch (idx) {
+        case 2:
+            x = xCenter;
+            xPad = padding;
+            break;
+        case 3:
+            yPad = padding;
+            y = yCenter;
+            break;
+        case 4:
+            xPad = padding;
+            yPad = padding;
+            x = xCenter;
+            y = yCenter;
+            break;
+    }
+
+    const xPos = Math.floor(x + xPad / devicePixelRatio);
+    const yPos = Math.floor(y + yPad / devicePixelRatio);
+
+    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
+
+    if (idx === 4)
+        await drawLogo(
+            ctx,
+            width - xPad,
+            height - yPad,
+            0.5 * devicePixelRatio
+        );
+
+    const imageData = await getImageData(ctx, width, height);
+
+    await app.drawImage({
+        imageData,
+        x: `${x}px`,
+        y: `${y}px`,
+        zIndex: idx + 1,
+    });
+
+    // We need to divide out the scaling ratio for drawing participants
+    const vWidth = Math.floor(w / devicePixelRatio);
+    const vHeight = Math.floor(h / devicePixelRatio);
+
+    const p = shownParticipants[idx - 1];
+
+    if (p) {
+        await app.drawParticipant({
+            x: `${xPos}px`,
+            y: `${yPos}px`,
+            participantId: p.participantId,
+            width: `${vWidth}px`,
+            height: `${vHeight}px`,
+            zIndex: idx,
+        });
+    }
+}
+
+async function draw() {
+    await app.clearScreen();
+
+    const { center, quadrant } = calcScreen();
+
+    for (let i = 1; i <= 4; i++)
+        await drawQuadrant(
+            i,
+            quadrant.width,
+            quadrant.height,
+            center.x,
+            center.y
+        );
+}
+
+function calcScreen() {
+    const device = {
+        width: innerWidth * devicePixelRatio,
+        height: innerHeight * devicePixelRatio,
+    };
+
+    return {
+        quadrant: {
+            width: device.width / 2,
+            height: device.height / 2,
+        },
+        center: {
+            x: device.width / (devicePixelRatio * 2),
+            y: device.height / (devicePixelRatio * 2),
+        },
+    };
+}
+
 try {
     await app.init();
     await app.start();
 
-    /*    app.sdk.callZoomApi('connect')
-    await app.sdk.addEventListener('onMessage', async ({action}) => {
-        if (action === 'ended') {
-            await app.sdk.callZoomApi("postMessage", {exampleData: "some data to sync"});
-            app.sdk.callZoomApi("endSyncData", {});
+    if (app.user.role === 'host') shownParticipants[0] = app.user;
+
+    app.sdk.onParticipantChange(({ participants }) => {
+        for (const part of participants) {
+            const p = {
+                participantId: part.participantId,
+                role: part.role,
+                screenName: part.screenName,
+            };
+
+            if (part.status === 'join') return allParticipants.push(p);
+
+            const i = allParticipants.indexOf(p);
+            if (i !== -1) allParticipants.splice(i, 1);
+
+            const idx = shownParticipants.indexOf(p);
+            if (idx !== -1) {
+                shownParticipants.splice(i, 1);
+            }
         }
-    })*/
+    });
+
+    window.addEventListener(
+        'resize',
+        app.debounce(async () => await draw(), 1000)
+    );
 } catch (e) {
     console.error(e);
 }
-
-window.addEventListener(
-    'resize',
-    app.debounce(async () => {
-        const device = {
-            width: innerWidth * devicePixelRatio,
-            height: innerHeight * devicePixelRatio,
-        };
-
-        // We can't draw a full width HIDPI canvas so we'll draw quadrants.
-        const width = device.width / 2;
-        const height = device.height / 2;
-
-        const x1 = device.width / (devicePixelRatio * 2);
-        const y1 = device.height / (devicePixelRatio * 2);
-
-        try {
-            await app.clearScreen();
-
-            for (let i = 1; i <= 4; i++) {
-                const ctx = createCanvas(width, height);
-                drawBackground(ctx, width, height);
-
-                const w = Math.floor(width * 0.85);
-                const h = Math.floor((w * 9) / 16);
-
-                let x, y;
-                x = y = 0;
-
-                const padding = 10 * devicePixelRatio;
-                let xPad = Math.max(width - (w + padding), 0);
-                let yPad = Math.max(height - (h + padding), 0);
-
-                switch (i) {
-                    case 2:
-                        x = x1;
-                        xPad = padding;
-                        break;
-                    case 3:
-                        yPad = padding;
-                        y = y1;
-                        break;
-                    case 4:
-                        xPad = padding;
-                        yPad = padding;
-                        x = x1;
-                        y = y1;
-                        break;
-                }
-
-                clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
-
-                if (i === 4) await drawLogo(ctx, 0, 0, 256, 128);
-
-                const imageData = await getImageData(ctx, width, height);
-
-                await app.drawImage({
-                    imageData,
-                    x: `${x}px`,
-                    y: `${y}px`,
-                    zIndex: i + 1,
-                });
-
-                // We need to divide out the scaling ratio for drawing participants
-                const vWidth = Math.floor(w / devicePixelRatio);
-                const vHeight = Math.floor(h / devicePixelRatio);
-
-                const xPos = Math.floor(x + xPad / devicePixelRatio);
-                const yPos = Math.floor(y + yPad / devicePixelRatio);
-
-                const p = app.participants[i - 1];
-
-                if (p) {
-                    await app.drawParticipant({
-                        x: `${xPos}px`,
-                        y: `${yPos}px`,
-                        participantId: p.participantId,
-                        width: `${vWidth}px`,
-                        height: `${vHeight}px`,
-                        zIndex: i,
-                    });
-                }
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }, 1000)
-);
-
-/*
-async function drawStaticImage(src, x = 0, y = 0, zIndex = 1) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-
-        img.onload = function () {
-            if (!offscreen.ctx)
-                return;
-
-            const w = video.width;
-            const h = video.height;
-
-            offscreen.ctx.drawImage(img, 0, 0, w, h);
-            const imageData = offscreen.ctx.getImageData(0,0, w, h);
-            offscreen.ctx.clearRect(0,0, w, h);
-
-            const r = zoomSdk.drawImage({
-                zIndex,
-                imageData,
-                x: `${x}px`,
-                y: `${y}px`,
-            });
-            resolve(r);
-        };
-
-        img.onerror = (e) => reject(e);
-        img.src = src;
-    });
-}
-
-async function drawParticipant(participantId, x = '0px', y = '0px', zIndex = 1, width = '100%', height = '100%') {
-    return zoomSdk.drawParticipant({
-        participantId,
-        x,
-        y,
-        width,
-        height,
-        zIndex,
-    });
-}
-
-async function addEventListeners() {
-
-}*/
