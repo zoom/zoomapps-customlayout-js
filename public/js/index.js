@@ -98,12 +98,12 @@ window.addEventListener(
                 let x, y;
                 x = y = 0;
 
-                let w = width * 0.95;
+                let w = width * 0.85;
                 let h = (w * 9) / 16;
 
-                const padding = 10 * devicePixelRatio;
-                let xPad = width - w;
-                let yPad = height - h;
+                const padding = 5 * devicePixelRatio;
+                let xPad = Math.max(width - (w + padding), 0);
+                let yPad = Math.max(height - (h + padding), 0);
 
                 switch (i) {
                     case 1:
