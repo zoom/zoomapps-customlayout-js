@@ -1,6 +1,8 @@
 // eslint-disable-next-line import/no-unresolved
 import app from '/js/lib/immersive-app.js';
 
+const zoomBlue = '#2D8CFF';
+
 function createCanvas(width, height) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -10,53 +12,54 @@ function createCanvas(width, height) {
 
 function drawBackground(ctx, width, height) {
     ctx.save();
-
     ctx.fillStyle = '#2D8CFF';
-
-    ctx.rect(0, 0, width, height);
-    ctx.fill();
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
 }
 
 function clipRoundRect(ctx, x, y, width, height, radius) {
     ctx.save();
-    //ctx.lineWidth = 75;
+    //ctx.lineWidth = 10;
     ctx.strokeStyle = 'rgba(0,0,0,0)';
-    ctx.fillStyle = '#2D8CFF';
+    ctx.fillStyle = zoomBlue;
 
-    if (typeof radius === 'undefined') {
-        radius = 5;
-    }
-
-    if (typeof radius === 'number') {
-        radius = { tl: radius, tr: radius, br: radius, bl: radius };
-    } else {
-        const defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
-        for (let side in defaultRadius) {
-            radius[side] = radius[side] || defaultRadius[side];
-        }
-    }
+    const rad = { tl: radius, tr: radius, br: radius, bl: radius };
 
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
 
-    ctx.moveTo(x + radius.tl, y);
-    ctx.lineTo(x + width - radius.tr, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-    ctx.lineTo(x + width, y + height - radius.br);
-    ctx.quadraticCurveTo(
-        x + width,
-        y + height,
-        x + width - radius.br,
-        y + height
-    );
-    ctx.lineTo(x + radius.bl, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-    ctx.lineTo(x, y + radius.tl);
-    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-    ctx.stroke();
+    ctx.moveTo(x + rad.tl, y);
+    ctx.lineTo(x + width - rad.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + rad.tr);
+
+    ctx.lineTo(x + width, y + height - rad.br);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - rad.br, y + height);
+
+    ctx.lineTo(x + rad.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - rad.bl);
+
+    ctx.lineTo(x, y + rad.tl);
+    ctx.quadraticCurveTo(x, y, x + rad.tl, y);
+
     ctx.fill();
     ctx.closePath();
     ctx.clip();
+    ctx.restore();
+}
+
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.addEventListener('load', () => resolve(img));
+        img.addEventListener('error', (e) => reject(e));
+        img.src = src;
+    });
+}
+
+async function drawLogo(ctx, x, y, width, height) {
+    const logo = await loadImage('/img/zoom.png');
+    ctx.save();
+    ctx.drawImage(logo, x, y, width, height);
     ctx.restore();
 }
 
@@ -82,8 +85,8 @@ window.addEventListener(
             height: innerHeight * devicePixelRatio,
         };
 
-        const width = Math.floor(device.width / 2);
-        const height = Math.floor(device.height / 2);
+        const width = Math.ceil(device.width / 2);
+        const height = Math.ceil(device.height / 2);
 
         const x1 = Math.floor(device.width / (devicePixelRatio * 2));
         const y1 = Math.floor(device.height / (devicePixelRatio * 2));
@@ -135,7 +138,9 @@ window.addEventListener(
                         break;
                 }
 
-                clipRoundRect(ctx, xPad, yPad, w, h, 25);
+                clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
+
+                if (i === 4) await drawLogo(ctx, w - x, h - y, 128, 256);
 
                 const imageData = await getImageData(ctx, width, height);
 
