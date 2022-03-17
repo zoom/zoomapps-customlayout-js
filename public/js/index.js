@@ -3,7 +3,6 @@ import app from '/js/lib/immersive-app.js';
 
 const zoomBlue = '#2D8CFF';
 
-const allParticipants = [];
 const shownParticipants = [];
 
 function createCanvas(width, height) {
@@ -15,7 +14,7 @@ function createCanvas(width, height) {
 
 function drawBackground(ctx, width, height) {
     ctx.save();
-    ctx.fillStyle = '#2D8CFF';
+    ctx.fillStyle = zoomBlue;
     ctx.fillRect(0, 0, width, height);
     ctx.restore();
 }
@@ -63,9 +62,8 @@ async function drawLogo(ctx, x, y, scale) {
     const logo = await loadImage('/img/zoom.png');
     const width = logo.width * scale;
     const height = logo.height * scale;
-    ctx.save();
+
     ctx.drawImage(logo, x, y, width, height);
-    ctx.restore();
 }
 
 function getImageData(ctx, width, height) {
@@ -109,7 +107,7 @@ async function drawQuadrant(idx, width, height, xCenter, yCenter) {
     const xPos = Math.floor(x + xPad / devicePixelRatio);
     const yPos = Math.floor(y + yPad / devicePixelRatio);
 
-    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 25);
+    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 100 * devicePixelRatio);
 
     if (idx === 4)
         await drawLogo(
@@ -134,11 +132,11 @@ async function drawQuadrant(idx, width, height, xCenter, yCenter) {
 
     const p = shownParticipants[idx - 1];
 
-    if (p) {
+    if (p?.participantId) {
         await app.drawParticipant({
+            participantId: p.participantId,
             x: `${xPos}px`,
             y: `${yPos}px`,
-            participantId: p.participantId,
             width: `${vWidth}px`,
             height: `${vHeight}px`,
             zIndex: idx,
@@ -146,19 +144,23 @@ async function drawQuadrant(idx, width, height, xCenter, yCenter) {
     }
 }
 
+async function drawIndex(idx) {
+    console.log('drawing index', idx);
+    const { center, quadrant } = calcScreen();
+
+    await drawQuadrant(
+        idx,
+        quadrant.width,
+        quadrant.height,
+        center.x,
+        center.y
+    );
+}
+
 async function draw() {
     await app.clearScreen();
 
-    const { center, quadrant } = calcScreen();
-
-    for (let i = 1; i <= 4; i++)
-        await drawQuadrant(
-            i,
-            quadrant.width,
-            quadrant.height,
-            center.x,
-            center.y
-        );
+    for (let i = 1; i <= 4; i++) await drawIndex(i);
 }
 
 function calcScreen() {
@@ -179,11 +181,23 @@ function calcScreen() {
     };
 }
 
+window.addEventListener(
+    'resize',
+    app.debounce(async () => await draw(), 1000)
+);
+
 try {
     await app.init();
     await app.start();
 
-    if (app.user.role === 'host') shownParticipants[0] = app.user;
+    console.log('participants', app.participants);
+
+    shownParticipants[0] = app.user;
+    const others = app.participants.filter(
+        (p) => p.participantId !== app.user.participantId
+    );
+    shownParticipants.push(...others.splice(0, 2));
+    console.log(shownParticipants);
 
     app.sdk.onParticipantChange(({ participants }) => {
         for (const part of participants) {
@@ -193,22 +207,32 @@ try {
                 screenName: part.screenName,
             };
 
-            if (part.status === 'join') return allParticipants.push(p);
+            const i = app.participants.indexOf(p);
 
-            const i = allParticipants.indexOf(p);
-            if (i !== -1) allParticipants.splice(i, 1);
+            if (part.status === 'join') {
+                app.participants.push(p);
+                if (shownParticipants.length < 3) {
+                    console.log('pushed to shown');
+                    shownParticipants.push(p);
+                    //app.debounce(async () => await drawIndex(i), 1000);
+                }
+            } else if (i !== -1) {
+                app.participants.splice(i, 1);
 
-            const idx = shownParticipants.indexOf(p);
-            if (idx !== -1) {
-                shownParticipants.splice(i, 1);
+                const idx = shownParticipants.indexOf(p);
+                if (idx !== -1) {
+                    console.log('spliced from shown');
+                    shownParticipants.splice(i, 1);
+                    //app.debounce(async () => await drawIndex(i), 1000);
+                }
             }
         }
     });
-
-    window.addEventListener(
-        'resize',
-        app.debounce(async () => await draw(), 1000)
-    );
 } catch (e) {
     console.error(e);
+    app.sdk.showNotification({
+        type: 'error',
+        title: 'Immersive App Error',
+        message: e.message,
+    });
 }

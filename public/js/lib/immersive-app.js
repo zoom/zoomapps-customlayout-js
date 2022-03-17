@@ -34,9 +34,10 @@ class ImmersiveApp {
             if (!this.sdk)
                 throw new Error('Zoom App JS SDK is not loaded on the page');
 
-            this.sdk.onMyMediaChange(
-                ({ media: video }) => (this.video = video)
-            );
+            this.sdk.onMyMediaChange(async (e) => {
+                this.video = e.media.video;
+                console.log('Media Changed', e);
+            });
 
             ImmersiveApp.#instance = this;
         }
@@ -52,11 +53,16 @@ class ImmersiveApp {
         return this.#video;
     }
 
-    set video({ width, height }) {
-        this.#video = {
-            width,
-            height,
-        };
+    set video({ state, width, height }) {
+        this.#video.state = state ?? (width !== 0 && height !== 0);
+        if (width) this.#video.width = width;
+        if (height) this.#video.height = height;
+
+        console.log('video', this.#video);
+    }
+
+    get participants() {
+        return this.#participants;
     }
 
     get user() {
@@ -96,14 +102,13 @@ class ImmersiveApp {
                 'onMyMediaChange',
                 'onParticipantChange',
                 'runRenderingContext',
+                'showNotification',
                 'sendAppInvitationToAllParticipants',
             ],
         });
         console.debug('Configuration', conf);
 
-        this.video = conf.media.video;
-        const { participants } = await this.sdk.getMeetingParticipants();
-        this.#participants = participants;
+        if (conf.media.video) this.video = conf.media.video;
 
         return conf;
     }
@@ -122,7 +127,10 @@ class ImmersiveApp {
 
         if (isNotHost || isNotMeeting) return;
 
-        return this.sdk.runRenderingContext({ view: 'immersive' });
+        await this.sdk.runRenderingContext({ view: 'immersive' });
+
+        const { participants } = await this.sdk.getMeetingParticipants();
+        this.#participants = participants;
     }
 
     stop() {
@@ -142,9 +150,7 @@ class ImmersiveApp {
 
     async drawImage(options) {
         const { imageId } = await this.sdk.drawImage(options);
-
         this.#drawnImages.push(imageId);
-        console.debug('image drawn', imageId);
 
         return imageId;
     }
@@ -153,16 +159,13 @@ class ImmersiveApp {
         while (this.#drawnImages.length) {
             const imageId = this.#drawnImages.pop();
             await this.sdk.clearImage({ imageId });
-            console.debug('cleared image', imageId);
         }
     }
 
     async clearAllParticipants() {
         while (this.#drawnParticipants.length) {
             const participantId = this.#drawnParticipants.pop();
-            console.log('participandId', participantId);
             await this.sdk.clearParticipant({ participantId });
-            console.debug('cleared participant', participantId);
         }
     }
 
@@ -173,14 +176,6 @@ class ImmersiveApp {
 
     inviteAllParticipants() {
         return this.sdk.sendAppInvitationToAllParticipants();
-    }
-
-    async #redraw() {
-        for (const p of this.#drawnParticipants) {
-            const { participantId } = p;
-            console.log(p);
-            this.sdk.clearParticipant({ participantId });
-        }
     }
 }
 
