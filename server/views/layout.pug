@@ -8,13 +8,16 @@ html(lang="en")
         meta(http-equiv='X-UA-Compatible', content='IE=edge')
         meta(name='description', content='Some description')
         meta(name='viewport', content='width=device-width, initial-scale=1')
-        link(rel='stylesheet', href='/css/style.css')
+        style(nonce=`${nonce}`)
+            include /css/vendor/bulma.min.css
         style(nonce=`${nonce}`)
             include /css/style.css
     body
-        block content
-        script(type='application/javascript' nonce=`${nonce}`)
-            include /js/vendor/zoom-apps-js-sdk.0.13.0.js
-        script(type='module' nonce=`${nonce}`)
-            include /js/index.js
+        section#section
+            block content
+        if isZoom
+            script(type='application/javascript' nonce=`${nonce}`)
+                include /js/vendor/zoom-apps-js-sdk.0.13.0.js
+            script(type='module' nonce=`${nonce}`)
+                include /js/index.js
         noscript Javascript must be enabled to use this application

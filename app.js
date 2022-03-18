@@ -68,7 +68,6 @@ axios.interceptors.request.use(logFunc);
 axios.interceptors.response.use(logFunc);
 
 /*  Middleware */
-
 // generate a nonce for inlining scripts and styles
 app.use((req, res, next) => {
     res.locals.cspNonce = crypto.randomBytes(16).toString('hex');

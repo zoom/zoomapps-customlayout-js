@@ -1,7 +1,29 @@
 extends layout
 
 block content
-    if !isZoom
+    if isZoom
+        div.field
+            label.label(for='color-sel') Choose a Color:&nbsp
+            div.control
+                div.select
+                    select#color-sel(name='colors')
+                        option(value='zoomBlue' selected) Zoom Blue
+                            option(value='black') Black
+                            option(value='blue') Blue
+                            option(value='green') Green
+                            option(value='grey') Grey
+                            option(value='red') Red
+                            option(value='yellow') Yellow
+        div.field
+            label.label(for='cust-color') Custom Color:&nbsp
+            div.control
+                input.input#cust-color(type='text' name='cust-color')
+        div.field.is-invisible#participants
+            label(for='part-sel') Select 3 Participants to Show:&nbsp
+            div.control
+                div.select
+                    select#part-sel(multiple name='part-sel')
+    else
         p You're viewing your Zoom App through the browser&nbsp;
             a(href=`${installURL}`) Click Here
             | &nbsp;to install your app in Zoom

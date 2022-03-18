@@ -102,13 +102,12 @@ class ImmersiveApp {
                 'onMyMediaChange',
                 'onParticipantChange',
                 'runRenderingContext',
-                'showNotification',
                 'sendAppInvitationToAllParticipants',
             ],
         });
         console.debug('Configuration', conf);
 
-        if (conf.media.video) this.video = conf.media.video;
+        if (conf.media?.video) this.video = conf.media.video;
 
         return conf;
     }
@@ -165,8 +164,14 @@ class ImmersiveApp {
     async clearAllParticipants() {
         while (this.#drawnParticipants.length) {
             const participantId = this.#drawnParticipants.pop();
-            await this.sdk.clearParticipant({ participantId });
+            this.sdk.clearParticipant({ participantId });
         }
+    }
+
+    async clearParticipant(participantId) {
+        await this.sdk.clearParticipant({ participantId });
+        const i = this.#drawnParticipants.indexOf(participantId);
+        this.#drawnParticipants.splice(i, 1);
     }
 
     async clearScreen() {

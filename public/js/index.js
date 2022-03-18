@@ -2,7 +2,6 @@
 import app from '/js/lib/immersive-app.js';
 
 const zoomBlue = '#2D8CFF';
-
 const shownParticipants = [];
 
 function createCanvas(width, height) {
@@ -19,33 +18,50 @@ function drawBackground(ctx, width, height) {
     ctx.restore();
 }
 
-function clipRoundRect(ctx, x, y, width, height, radius) {
+function getRoundRectPath(x, y, width, height, radius) {
+    const region = new Path2D();
+
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    region.moveTo(x + radius, y);
+
+    region.arcTo(x + width, y, x + width, y + height, radius);
+    region.arcTo(x + width, y + height, x, y + height, radius);
+    region.arcTo(x, y + height, x, y, radius);
+    region.arcTo(x, y, x + width, y, radius);
+
+    region.closePath();
+
+    return region;
+}
+
+function clipRoundRect(ctx, x, y, width, height, rad) {
     ctx.save();
-    //ctx.lineWidth = 10;
-    ctx.strokeStyle = 'rgba(0,0,0,0)';
-    ctx.fillStyle = zoomBlue;
-
-    const rad = { tl: radius, tr: radius, br: radius, bl: radius };
-
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
 
-    ctx.moveTo(x + rad.tl, y);
-    ctx.lineTo(x + width - rad.tr, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + rad.tr);
+    const region = getRoundRectPath(x, y, width, height, rad);
 
-    ctx.lineTo(x + width, y + height - rad.br);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - rad.br, y + height);
+    ctx.fill(region);
+    ctx.clip(region);
+    ctx.restore();
+}
 
-    ctx.lineTo(x + rad.bl, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - rad.bl);
+function drawRoundRect(ctx, x, y, width, height, rad, fill, stroke) {
+    ctx.save();
 
-    ctx.lineTo(x, y + rad.tl);
-    ctx.quadraticCurveTo(x, y, x + rad.tl, y);
+    const region = getRoundRectPath(x, y, width, height, rad);
 
-    ctx.fill();
-    ctx.closePath();
-    ctx.clip();
+    if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.stroke(region);
+    }
+
+    if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill(region);
+    }
+
     ctx.restore();
 }
 
@@ -60,8 +76,8 @@ function loadImage(src) {
 
 async function drawLogo(ctx, x, y, scale) {
     const logo = await loadImage('/img/zoom.png');
-    const width = logo.width * scale;
-    const height = logo.height * scale;
+    const width = Math.floor(logo.width * scale);
+    const height = Math.floor(logo.height * scale);
 
     ctx.drawImage(logo, x, y, width, height);
 }
@@ -73,11 +89,11 @@ function getImageData(ctx, width, height) {
     });
 }
 
-async function drawQuadrant(idx, width, height, xCenter, yCenter) {
+async function drawQuadrant({ idx, xCenter, yCenter, width, height }) {
     const ctx = createCanvas(width, height);
     drawBackground(ctx, width, height);
 
-    const w = Math.floor(width * 0.85);
+    const w = Math.floor(width * 0.9);
     const h = Math.floor((w * 9) / 16);
 
     let x, y;
@@ -107,15 +123,22 @@ async function drawQuadrant(idx, width, height, xCenter, yCenter) {
     const xPos = Math.floor(x + xPad / devicePixelRatio);
     const yPos = Math.floor(y + yPad / devicePixelRatio);
 
-    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, 100 * devicePixelRatio);
+    const rad = Math.floor(width / 6);
 
-    if (idx === 4)
-        await drawLogo(
-            ctx,
-            width - xPad,
-            height - yPad,
-            0.5 * devicePixelRatio
-        );
+    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, rad);
+
+    if (idx === 4) {
+        const rw = Math.floor(w / 2);
+        const rh = w / 5;
+
+        const rr = Math.floor(rad / 2);
+        const rx = width - rw;
+        const ry = height - (rh + (height - h - rr));
+
+        drawRoundRect(ctx, rx, ry, rw, rh, rr, zoomBlue);
+
+        await drawLogo(ctx, rx, ry, 0.5 * rh * devicePixelRatio);
+    }
 
     const imageData = await getImageData(ctx, width, height);
 
@@ -144,47 +167,75 @@ async function drawQuadrant(idx, width, height, xCenter, yCenter) {
     }
 }
 
-async function drawIndex(idx) {
-    console.log('drawing index', idx);
-    const { center, quadrant } = calcScreen();
-
-    await drawQuadrant(
-        idx,
-        quadrant.width,
-        quadrant.height,
-        center.x,
-        center.y
-    );
-}
-
-async function draw() {
-    await app.clearScreen();
-
-    for (let i = 1; i <= 4; i++) await drawIndex(i);
-}
-
-function calcScreen() {
+function getDimensions() {
     const device = {
         width: innerWidth * devicePixelRatio,
         height: innerHeight * devicePixelRatio,
     };
 
     return {
-        quadrant: {
-            width: device.width / 2,
-            height: device.height / 2,
-        },
-        center: {
-            x: device.width / (devicePixelRatio * 2),
-            y: device.height / (devicePixelRatio * 2),
-        },
+        width: device.width / 2,
+        height: device.height / 2,
+        xCenter: device.width / (devicePixelRatio * 2),
+        yCenter: device.height / (devicePixelRatio * 2),
     };
+}
+
+async function drawIndex(idx) {
+    await drawQuadrant({ idx, ...getDimensions() });
+}
+
+async function draw() {
+    await app.clearScreen();
+    const dimensions = getDimensions();
+
+    for (let i = 1; i <= 4; i++) await drawQuadrant({ idx: i, ...dimensions });
+}
+
+async function handleParticipantChange({ participants }) {
+    for (const part of participants) {
+        console.log('part', part);
+        const p = {
+            screenName: part.screenName,
+            participantId: part.participantId.toString(),
+            role: part.role,
+        };
+
+        const predicate = ({ participantId }) =>
+            participantId === p.participantId;
+
+        const i = app.participants.findIndex(predicate);
+
+        console.log(p);
+        console.log(i);
+
+        if (part.status === 'join') {
+            app.participants.push(p);
+
+            if (shownParticipants.length < 3) {
+                console.log('pushed to shown');
+                shownParticipants.push(p);
+
+                await drawIndex(shownParticipants.length);
+            }
+        } else if (i !== -1) {
+            app.participants.splice(i, 1);
+            const idx = shownParticipants.findIndex(predicate);
+            console.log(idx);
+            if (idx !== -1) {
+                await app.clearParticipant(p.participantId);
+                shownParticipants.splice(i, 1);
+            }
+        }
+    }
 }
 
 window.addEventListener(
     'resize',
     app.debounce(async () => await draw(), 1000)
 );
+
+app.sdk.onParticipantChange(handleParticipantChange);
 
 try {
     await app.init();
@@ -198,41 +249,6 @@ try {
     );
     shownParticipants.push(...others.splice(0, 2));
     console.log(shownParticipants);
-
-    app.sdk.onParticipantChange(({ participants }) => {
-        for (const part of participants) {
-            const p = {
-                participantId: part.participantId,
-                role: part.role,
-                screenName: part.screenName,
-            };
-
-            const i = app.participants.indexOf(p);
-
-            if (part.status === 'join') {
-                app.participants.push(p);
-                if (shownParticipants.length < 3) {
-                    console.log('pushed to shown');
-                    shownParticipants.push(p);
-                    //app.debounce(async () => await drawIndex(i), 1000);
-                }
-            } else if (i !== -1) {
-                app.participants.splice(i, 1);
-
-                const idx = shownParticipants.indexOf(p);
-                if (idx !== -1) {
-                    console.log('spliced from shown');
-                    shownParticipants.splice(i, 1);
-                    //app.debounce(async () => await drawIndex(i), 1000);
-                }
-            }
-        }
-    });
 } catch (e) {
     console.error(e);
-    app.sdk.showNotification({
-        type: 'error',
-        title: 'Immersive App Error',
-        message: e.message,
-    });
 }
