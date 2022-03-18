@@ -19,6 +19,7 @@ class ImmersiveApp {
     #drawnParticipants = [];
     #participants = [];
 
+    #context = '';
     #contexts = {
         inMeeting: 'inMeeting',
         inImmersive: 'inImmersive',
@@ -43,6 +44,10 @@ class ImmersiveApp {
 
     get sdk() {
         return this.#sdk;
+    }
+
+    get context() {
+        return this.#context;
     }
 
     get video() {
@@ -72,6 +77,7 @@ class ImmersiveApp {
             participantId,
         };
     }
+
     async init() {
         const conf = await this.sdk.config({
             capabilities: [
@@ -94,43 +100,42 @@ class ImmersiveApp {
 
         if (conf.media?.video) this.video = conf.media.video;
 
+        await this.updateContext();
+
+        if (this.isInMeeting()) this.user = await this.sdk.getUserContext();
+
         return conf;
     }
 
     async start() {
         // check that we're running as the host
-        this.user = await this.sdk.getUserContext();
         if (this.user.role !== 'host') return;
+
+        // check that we're in a meeting
+        if (!this.isInMeeting()) return;
 
         // Store current participants
         const { participants } = await this.sdk.getMeetingParticipants();
         this.#participants = participants;
-
-        // check that we're in a meeting
-        const isMeeting = await this.isInMeeting();
-        if (!isMeeting) return;
 
         // Start rendering Immersive Mode
         return this.sdk.runRenderingContext({ view: 'immersive' });
     }
 
     async stop() {
-        if (await this.isImmersive()) return this.sdk.closeRenderingContext();
+        if (this.isImmersive()) return this.sdk.closeRenderingContext();
     }
 
-    getContext() {
-        // check what context the app is running inMeeting
-        return this.sdk.getRunningContext();
+    async updateContext() {
+        this.#context = await this.sdk.getRunningContext();
     }
 
-    async isInMeeting() {
-        const ctx = await this.getContext();
-        return ctx === this.#contexts.inMeeting;
+    isInMeeting() {
+        return this.#context === this.#contexts.inMeeting;
     }
 
-    async isImmersive() {
-        const ctx = await this.getContext();
-        return ctx === this.#contexts.inImmersive;
+    isImmersive() {
+        return this.#context === this.#contexts.inImmersive;
     }
 
     async drawParticipant(options) {
