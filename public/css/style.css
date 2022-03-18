@@ -1,1 +1,4 @@
-
+body {
+    min-height: 100vh;
+    background-color: #2D8CFF;
+}

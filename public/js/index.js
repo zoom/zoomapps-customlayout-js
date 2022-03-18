@@ -1,8 +1,35 @@
 // eslint-disable-next-line import/no-unresolved
 import app from '/js/lib/immersive-app.js';
 
-const zoomBlue = '#2D8CFF';
+const colors = {
+    black: 'hsl(0, 0%, 4%)',
+    blue: 'hsl(217, 71%, 53%)',
+    darkBlue: 'hsl(204, 86%, 53%)',
+    green: 'hsl(141, 53%, 53%)',
+    grey: 'hsl(0, 0%, 71%)',
+    red: 'hsl(348, 100%, 61%)',
+    white: 'hsl(0, 0%, 100%)',
+    yellow: 'hsl(48, 100%, 67%)',
+    zoomBlue: 'hsl(213, 100%, 59%)',
+};
+
+const settings = {
+    participants: [],
+    color: colors.zoomBlue,
+};
+
 const shownParticipants = [];
+
+function debounce(fn, ms = 250) {
+    let timer;
+    return () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            fn.apply(this, arguments);
+        }, ms);
+    };
+}
 
 function createCanvas(width, height) {
     const canvas = document.createElement('canvas');
@@ -13,7 +40,7 @@ function createCanvas(width, height) {
 
 function drawBackground(ctx, width, height) {
     ctx.save();
-    ctx.fillStyle = zoomBlue;
+    ctx.fillStyle = settings.color;
     ctx.fillRect(0, 0, width, height);
     ctx.restore();
 }
@@ -135,7 +162,7 @@ async function drawQuadrant({ idx, xCenter, yCenter, width, height }) {
         const rx = width - rw;
         const ry = height - (rh + (height - h - rr));
 
-        drawRoundRect(ctx, rx, ry, rw, rh, rr, zoomBlue);
+        drawRoundRect(ctx, rx, ry, rw, rh, rr, settings.color);
 
         await drawLogo(ctx, rx, ry, 0.5 * rh * devicePixelRatio);
     }
@@ -230,25 +257,77 @@ async function handleParticipantChange({ participants }) {
     }
 }
 
+const mainContent = document.getElementById('main');
+
+const colorSel = document.getElementById('colorSel');
+const customColorInp = document.getElementById('custColorInp');
+const participantSel = document.getElementById('participantSel');
+
+const helpMsg = document.getElementById('helpMsg');
+
+const startBtn = document.getElementById('startBtn');
+
+startBtn.addEventListener('click', async () => {
+    await app.start();
+    const isImmersive = await app.isImmersive();
+    if (!isImmersive) return;
+
+    mainContent.style.visibility = 'hidden';
+
+    shownParticipants[0] = app.user;
+    const others = app.participants.filter(
+        (p) => p.participantId !== app.user.participantId
+    );
+
+    shownParticipants.push(...others.splice(0, 2));
+});
+
+colorSel.addEventListener('change', async (e) => {
+    if (customColorInp.innerText.length > 0) return;
+
+    const color = colors[e.target.value];
+    if (!color) return;
+
+    settings.color = color;
+    document.body.style.backgroundColor = color;
+
+    console.log(settings.color);
+
+    if (await app.isImmersive()) {
+        try {
+            await draw();
+        } catch (e) {
+            console.error('failed to update color', e);
+        }
+    }
+});
+
+customColorInp.addEventListener(
+    'change',
+    debounce((e) => {
+        const v = e.target.value;
+        if (v && typeof v === 'string') settings.color = v;
+    }, 1000)
+);
+
 window.addEventListener(
     'resize',
-    app.debounce(async () => await draw(), 1000)
+    debounce(async () => await draw(), 1000)
 );
 
 app.sdk.onParticipantChange(handleParticipantChange);
 
 try {
     await app.init();
-    await app.start();
+    const inMeeting = await app.isInMeeting();
 
-    console.log('participants', app.participants);
+    if (inMeeting) {
+        const c = 'is-hidden';
+        participantSel.classList.remove(c);
+        startBtn.classList.remove(c);
 
-    shownParticipants[0] = app.user;
-    const others = app.participants.filter(
-        (p) => p.participantId !== app.user.participantId
-    );
-    shownParticipants.push(...others.splice(0, 2));
-    console.log(shownParticipants);
+        helpMsg.style.display = 'none';
+    }
 } catch (e) {
     console.error(e);
 }
