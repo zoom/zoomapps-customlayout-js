@@ -12,9 +12,9 @@ html(lang="en")
         link(rel='stylesheet', href='/css/style.css')
     body
         section.section
-            div.container
+            .container
                 if isZoom
-                    div.is-hidden#main
+                    .is-hidden#main
                         block content
                 else
                     h1.title= title

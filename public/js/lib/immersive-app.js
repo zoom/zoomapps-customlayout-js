@@ -16,6 +16,13 @@ class ImmersiveApp {
         height: 0,
     };
 
+    #device = {
+        width: 0,
+        height: 0,
+    };
+
+    #onResize = () => {};
+
     #drawnImages = [];
     #drawnParticipants = [];
     #participants = [];
@@ -24,6 +31,7 @@ class ImmersiveApp {
     #contexts = {
         inMeeting: 'inMeeting',
         inImmersive: 'inImmersive',
+        inClient: 'inMainClient',
     };
 
     constructor() {
@@ -35,6 +43,15 @@ class ImmersiveApp {
             this.sdk.onMyMediaChange(async (e) => {
                 this.video = e.media.video;
                 console.log('Media Changed', e);
+            });
+
+            window.addEventListener('resize', () => {
+                this.#device = {
+                    width: innerWidth * devicePixelRatio,
+                    height: innerHeight * devicePixelRatio,
+                };
+
+                this.#onResize();
             });
 
             ImmersiveApp.#instance = this;
@@ -63,12 +80,25 @@ class ImmersiveApp {
         console.log('video', this.#video);
     }
 
+    get device() {
+        return this.#device;
+    }
+
     get participants() {
         return this.#participants;
     }
 
     get user() {
         return this.#user;
+    }
+
+    set onResize(fn) {
+        if (typeof fn !== 'function') return;
+        this.#onResize = fn;
+    }
+
+    get onResize() {
+        return this.#onResize;
     }
 
     set user({ participantId, role, screenName }) {
@@ -131,7 +161,7 @@ class ImmersiveApp {
     }
 
     async stop() {
-        if (this.isImmersive()) return this.sdk.closeRenderingContext();
+        return this.sdk.closeRenderingContext();
     }
 
     async updateContext() {
@@ -140,6 +170,10 @@ class ImmersiveApp {
 
     isInMeeting() {
         return this.#context === this.#contexts.inMeeting;
+    }
+
+    isInClient() {
+        return this.#context === this.#contexts.inClient;
     }
 
     isImmersive() {

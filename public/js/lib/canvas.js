@@ -1,16 +1,15 @@
 import app from './immersive-app.js';
 
 function getQuadrantSize() {
-    const device = {
-        width: innerWidth * devicePixelRatio,
-        height: innerHeight * devicePixelRatio,
-    };
+    const { device } = app;
+    const w = device.width;
+    const h = device.height;
 
     return {
-        width: Math.floor(device.width / 2),
-        height: Math.floor(device.height / 2),
-        xCenter: Math.floor(device.width / (devicePixelRatio * 2)),
-        yCenter: Math.floor(device.height / (devicePixelRatio * 2)),
+        width: Math.floor(w / 2),
+        height: Math.floor(h / 2),
+        xCenter: Math.floor(w / (devicePixelRatio * 2)),
+        yCenter: Math.floor(h / (devicePixelRatio * 2)),
     };
 }
 
@@ -67,7 +66,7 @@ export function clipRoundRect(ctx, x, y, width, height, rad) {
 
     const region = getRoundRectPath(x, y, width, height, rad);
 
-    ctx.fill(region);
+    ctx.fill(region, 'evenodd');
     ctx.clip(region);
     ctx.restore();
 }
@@ -132,12 +131,17 @@ export function drawText({
     ctx.restore();
 }
 
-export async function drawLogo(ctx, x, y, scale) {
+export async function drawLogo(ctx, x, y, width, height) {
     const logo = await loadImage('/img/zoom.png');
-    const width = Math.floor(logo.width * scale);
-    const height = Math.floor(logo.height * scale);
 
-    ctx.drawImage(logo, x, y, width, height);
+    const hRatio = width / logo.width;
+    const vRatio = height / logo.height;
+    const ratio = Math.min(hRatio, vRatio);
+
+    const w = logo.width * ratio;
+    const h = logo.height * ratio;
+
+    ctx.drawImage(logo, x, y, w, h);
 }
 
 function getImageData(ctx, width, height) {
@@ -150,6 +154,7 @@ function getImageData(ctx, width, height) {
 async function drawQuadrant({
     idx,
     fill,
+    text,
     width,
     height,
     xCenter,
@@ -194,7 +199,7 @@ async function drawQuadrant({
 
     clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, rad);
 
-    const isText = idx === 3;
+    const isText = idx === 3 && text;
     if (isText) {
         const rw = Math.floor(w / 2);
         const rh = Math.floor(w / 7);
@@ -209,10 +214,8 @@ async function drawQuadrant({
         drawRoundRect(ctx, rx, ry, rw, rh, rr, fill);
 
         // draw our logo
-        await drawLogo(ctx, rx, ry, 0.25 * devicePixelRatio);
+        await drawLogo(ctx, rx, ry - padding, rw, rh);
 
-        let text =
-            'Ja morant broke his own franchise record with only 32 points just two days after setting it';
         const wordPad = Math.floor((h - rh) / 2);
         const size = 64;
 
@@ -253,16 +256,19 @@ async function drawQuadrant({
     }
 }
 
-export async function drawIndex(idx, participant, fill) {
-    await drawQuadrant({ idx, participant, fill, ...getQuadrantSize() });
+export async function drawIndex(idx, participant, fill, text = '') {
+    await drawQuadrant({ idx, participant, text, fill, ...getQuadrantSize() });
 }
 
-export async function draw(participants, fill) {
+export async function updateText(text, fill) {
+    return drawIndex({ idx: 3, text, fill, ...getQuadrantSize() });
+}
+
+export async function draw(participants, fill, text = '') {
     const dimensions = getQuadrantSize();
 
-    // Iterate zIndexes - start at 1
     for (let idx = 0; idx < 4; idx++) {
         const participant = participants[idx];
-        await drawQuadrant({ idx, participant, fill, ...dimensions });
+        await drawQuadrant({ idx, participant, text, fill, ...dimensions });
     }
 }

@@ -3,12 +3,12 @@ extends layout
 block content
     h1.title.has-text-centered Immersive Zoom App
     h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
-    div.columns
-        div.column.column.is-one-fifth
-            div.field
-                label.label(for='color-sel') Choose a Color:&nbsp
-                div.control
-                    div.select
+    .columns
+        .column.is-two-fifths
+            .field
+                label.label(for='colorSel') Choose a Color:&nbsp
+                .control
+                    .select
                         select#colorSel(name='colors')
                             option(value='black') Black
                             option(value='blue' selected) Blue
@@ -17,18 +17,37 @@ block content
                             option(value='red') Red
                             option(value='white') White
                             option(value='yellow') Yellow
-        div.column.column.is-one-fifth
-            div.field
-                label.label(for='cust-color') Custom Color:&nbsp
-                div.control
-                    input.input#custColorInp(type='text' name='cust-color' placeholder='HTML Canvas Fill Style')
-    div.columns
-        div.column.is-half
-            div.field.is-hidden#participants
-                label.label(for='part-sel') Select 3 Participants to Show:&nbsp
-                div.control
-                    div.select.is-multiple.is-fullwidth
-                        select#participantSel(size='10' name='part-sel' multiple)
-        div.column
-            div.control
-                button.button.is-hidden.is-fullwidth#startBtn Start
+        .column.is-two-fifths
+            .field
+                label.label(for='custColorInp') Custom Color:&nbsp
+                .control
+                    input.input#custColorInp(type='text' name='custColorInp' placeholder='HTML Canvas Fill Style')
+    .is-hidden#participants
+        .columns
+            .column.is-two-fifths
+                label.label(for='topicInp') Add Topics
+                .field.has-addons.has-addons-fullwidth
+                    .control.is-expanded
+                        input.input.is-fullwidth#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
+                    .control
+                        a.button#topicBtn
+                            | Add
+                .columns
+                    .column
+                        article.panel.has-background-white#topicList
+                            p.panel-heading
+                                | Topics
+            .column.is-two-fifths
+                .field
+                    label.label(for='participantSel') Select 3 Participants to Show:&nbsp
+                    .control
+                        .select.is-multiple.is-fullwidth
+                            select#participantSel(size='10' name='participantSel' multiple)
+                .columns
+                    .column
+                        .control
+                            button.button.is-fullwidth.is-hidden#applyBtn Apply
+        .columns
+            .column
+                .control
+                    button.button.is-hidden.is-fullwidth#startBtn Start
