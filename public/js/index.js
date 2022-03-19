@@ -100,8 +100,6 @@ startBtn.addEventListener('click', async () => {
     );
 
     settings.cast.push(...others.splice(0, 2));
-
-    await draw(settings.cast, settings.color);
 });
 
 colorSel.addEventListener('change', async (e) => {
@@ -129,10 +127,11 @@ window.addEventListener(
     'resize',
     debounce(
         async () => {
+            firstRun = false;
             await app.clearScreen();
             await draw(settings.cast, settings.color);
         },
-        firstRun ? 0 : 1000
+        firstRun ? 50 : 250
     )
 );
 
