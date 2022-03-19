@@ -1,8 +1,6 @@
 import app from './lib/immersive-app.js';
 import { draw, drawIndex } from './lib/canvas.js';
 
-let firstRun = true;
-
 const colors = {
     black: '#0a0a0a',
     green: '#48c774',
@@ -85,6 +83,7 @@ const startBtn = document.getElementById('startBtn');
 
 startBtn.addEventListener('click', async () => {
     await app.start();
+
     mainContent.classList.add('is-hidden');
     document.body.style.backgroundColor = 'white';
 
@@ -125,21 +124,15 @@ customColorInp.addEventListener(
 
 window.addEventListener(
     'resize',
-    debounce(
-        async () => {
-            firstRun = false;
+    debounce(async () => {
+        if (app.isImmersive()) {
             await app.clearScreen();
             await draw(settings.cast, settings.color);
-        },
-        firstRun ? 50 : 250
-    )
+        }
+    }, 250)
 );
 
 app.sdk.onParticipantChange(handleParticipantChange);
-
-app.sdk.callZoomApi('onConnect', (e) => {
-    console.log('onConnect', e);
-});
 
 try {
     await app.init();

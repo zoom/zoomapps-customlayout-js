@@ -85,16 +85,19 @@ class ImmersiveApp {
                 'clearImage',
                 'clearParticipant',
                 'closeRenderingContext',
+                'connect',
                 'drawImage',
                 'drawParticipant',
+                'endSyncData',
                 'getMeetingParticipants',
                 'getRunningContext',
                 'getUserContext',
-                'onMeeting',
                 'onConnect',
+                'onMeeting',
                 'onMessage',
                 'onMyMediaChange',
                 'onParticipantChange',
+                'postMessage',
                 'runRenderingContext',
                 'sendAppInvitationToAllParticipants',
             ],
@@ -103,9 +106,7 @@ class ImmersiveApp {
 
         if (conf.media?.video) this.video = conf.media.video;
 
-        this.sdk.callZoomApi('connect');
-
-        await this.updateContext();
+        this.#context = conf.runningContext;
 
         if (this.isInMeeting()) {
             this.user = await this.sdk.getUserContext();
@@ -126,7 +127,7 @@ class ImmersiveApp {
         if (!this.isInMeeting()) return;
 
         // Start rendering Immersive Mode
-        return this.sdk.runRenderingContext({ view: 'immersive' });
+        await this.sdk.runRenderingContext({ view: 'immersive' });
     }
 
     async stop() {

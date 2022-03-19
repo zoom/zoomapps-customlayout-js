@@ -7,10 +7,10 @@ function getQuadrantSize() {
     };
 
     return {
-        width: device.width / 2,
-        height: device.height / 2,
-        xCenter: device.width / (devicePixelRatio * 2),
-        yCenter: device.height / (devicePixelRatio * 2),
+        width: Math.floor(device.width / 2),
+        height: Math.floor(device.height / 2),
+        xCenter: Math.floor(device.width / (devicePixelRatio * 2)),
+        yCenter: Math.floor(device.height / (devicePixelRatio * 2)),
     };
 }
 
@@ -156,6 +156,7 @@ async function drawQuadrant({
     yCenter,
     participant,
 }) {
+    console.log('drawing index', idx);
     const ctx = createCanvas(width, height);
     drawBackground(ctx, width, height, fill);
 
@@ -193,8 +194,6 @@ async function drawQuadrant({
 
     clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, rad);
 
-    let textImage;
-
     const isText = idx === 3;
     if (isText) {
         const rw = Math.floor(w / 2);
@@ -212,15 +211,13 @@ async function drawQuadrant({
         // draw our logo
         await drawLogo(ctx, rx, ry, 0.25 * devicePixelRatio);
 
-        const tempCtx = createCanvas(width, height);
-
         let text =
             'Ja morant broke his own franchise record with only 32 points just two days after setting it';
         const wordPad = Math.floor((h - rh) / 2);
         const size = 64;
 
         drawText({
-            ctx: tempCtx,
+            ctx,
             text,
             size,
             x: Math.floor(w / 2) + xPad,
@@ -229,8 +226,6 @@ async function drawQuadrant({
             maxWidth: w,
             font: 'Arial Black',
         });
-
-        textImage = await getImageData(tempCtx, width, height);
     }
 
     const imageData = await getImageData(ctx, width, height);
@@ -239,16 +234,8 @@ async function drawQuadrant({
         imageData,
         x: `${x}px`,
         y: `${y}px`,
-        zIndex: idx + 3,
+        zIndex: idx,
     });
-
-    if (textImage)
-        await app.drawImage({
-            imageData: textImage,
-            x: `${x}px`,
-            y: `${y}px`,
-            zIndex: 1,
-        });
 
     if (participant?.participantId) {
         // We need to divide out the scaling ratio for drawing participants
