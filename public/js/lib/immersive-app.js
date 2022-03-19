@@ -11,6 +11,7 @@ class ImmersiveApp {
     };
 
     #video = {
+        state: false,
         width: 0,
         height: 0,
     };
@@ -90,6 +91,8 @@ class ImmersiveApp {
                 'getRunningContext',
                 'getUserContext',
                 'onMeeting',
+                'onConnect',
+                'onMessage',
                 'onMyMediaChange',
                 'onParticipantChange',
                 'runRenderingContext',
@@ -100,9 +103,17 @@ class ImmersiveApp {
 
         if (conf.media?.video) this.video = conf.media.video;
 
+        this.sdk.callZoomApi('connect');
+
         await this.updateContext();
 
-        if (this.isInMeeting()) this.user = await this.sdk.getUserContext();
+        if (this.isInMeeting()) {
+            this.user = await this.sdk.getUserContext();
+
+            // Store current participants
+            const { participants } = await this.sdk.getMeetingParticipants();
+            this.#participants = participants;
+        }
 
         return conf;
     }
@@ -113,10 +124,6 @@ class ImmersiveApp {
 
         // check that we're in a meeting
         if (!this.isInMeeting()) return;
-
-        // Store current participants
-        const { participants } = await this.sdk.getMeetingParticipants();
-        this.#participants = participants;
 
         // Start rendering Immersive Mode
         return this.sdk.runRenderingContext({ view: 'immersive' });

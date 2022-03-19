@@ -1,43 +1,34 @@
 extends layout
 
 block content
-    if !isZoom
-        h1.title.has-text-white= title
-        h2.subtitle.has-text-white You're viewing your Immersive Zoom App through the browser.&nbsp;
-            a.has-text-white.is-underlined(href=`${installURL}`) Click Here
-            | &nbsp;to install your app in Zoom
-    else
-        h1.title.has-text-centered Immersive Zoom App
-        h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
-        div.columns
-            div.column.column.is-one-fifth
-                div.field
-                    label.label(for='color-sel') Choose a Color:&nbsp
-                    div.control
-                        div.select
-                            select#colorSel(name='colors')
-                                option(value='black') Black
-                                option(value='blue') Blue
-                                option(value='darkBlue') Dark Blue
-                                option(value='green') Green
-                                option(value='grey') Grey
-                                option(value='red') Red
-                                option(value='white') White
-                                option(value='yellow') Yellow
-                                option(value='zoomBlue' selected) Zoom Blue
-            div.column.column.is-one-fifth
-                div.field
-                    label.label(for='cust-color') Custom Color:&nbsp
-                    div.control
-                        input.input#custColorInp(type='text' name='cust-color' placeholder='HTML Canvas Fill Style')
-        div.columns
-            div.column
-                div.field.is-hidden#participants
-                    label.label(for='part-sel') Select 3 Participants to Show:&nbsp
-                    div.control
-                        div.select.is-multiple
-                            select#participantSel(size='10' name='part-sel' multiple)
-            div.column
+    h1.title.has-text-centered Immersive Zoom App
+    h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
+    div.columns
+        div.column.column.is-one-fifth
+            div.field
+                label.label(for='color-sel') Choose a Color:&nbsp
                 div.control
-                    button.button.is-hidden.is-fullwidth#startBtn Start
-
+                    div.select
+                        select#colorSel(name='colors')
+                            option(value='black') Black
+                            option(value='blue' selected) Blue
+                            option(value='green') Green
+                            option(value='grey') Grey
+                            option(value='red') Red
+                            option(value='white') White
+                            option(value='yellow') Yellow
+        div.column.column.is-one-fifth
+            div.field
+                label.label(for='cust-color') Custom Color:&nbsp
+                div.control
+                    input.input#custColorInp(type='text' name='cust-color' placeholder='HTML Canvas Fill Style')
+    div.columns
+        div.column.is-half
+            div.field.is-hidden#participants
+                label.label(for='part-sel') Select 3 Participants to Show:&nbsp
+                div.control
+                    div.select.is-multiple.is-fullwidth
+                        select#participantSel(size='10' name='part-sel' multiple)
+        div.column
+            div.control
+                button.button.is-hidden.is-fullwidth#startBtn Start

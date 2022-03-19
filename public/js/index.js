@@ -1,32 +1,22 @@
 import app from './lib/immersive-app.js';
 import { draw, drawIndex } from './lib/canvas.js';
 
+let firstRun = true;
+
 const colors = {
-    black: 'hsl(0, 0%, 4%)',
-    blue: 'hsl(217, 71%, 53%)',
-    darkBlue: 'hsl(204, 86%, 53%)',
-    green: 'hsl(141, 53%, 53%)',
-    grey: 'hsl(0, 0%, 71%)',
-    red: 'hsl(348, 100%, 61%)',
-    white: 'hsl(0, 0%, 100%)',
-    yellow: 'hsl(48, 100%, 67%)',
-    zoomBlue: 'hsl(213, 100%, 59%)',
+    black: '#0a0a0a',
+    green: '#48c774',
+    grey: '#b5b5b5',
+    red: '#ff3860',
+    white: '#fff',
+    yellow: '#ffdd57',
+    blue: '#2e8cff',
 };
 
 const settings = {
     cast: [],
-    color: colors.zoomBlue,
+    color: colors.blue,
 };
-
-const mainContent = document.getElementById('main');
-
-const colorSel = document.getElementById('colorSel');
-const customColorInp = document.getElementById('custColorInp');
-const participantList = document.getElementById('participants');
-
-const helpMsg = document.getElementById('helpMsg');
-
-const startBtn = document.getElementById('startBtn');
 
 function debounce(fn, ms = 250) {
     let timer;
@@ -41,7 +31,6 @@ function debounce(fn, ms = 250) {
 
 async function handleParticipantChange({ participants }) {
     for (const part of participants) {
-        console.log('part', part);
         const p = {
             screenName: part.screenName,
             participantId: part.participantId.toString(),
@@ -73,21 +62,46 @@ async function handleParticipantChange({ participants }) {
     }
 }
 
+function setParticipantSel(el) {
+    for (const p of app.participants) {
+        const opt = document.createElement('option');
+
+        opt.value = p.participantId;
+        opt.text = `[${p.role}] ${p.screenName}`;
+
+        el.appendChild(opt);
+    }
+}
+
+const mainContent = document.getElementById('main');
+
+const colorSel = document.getElementById('colorSel');
+const customColorInp = document.getElementById('custColorInp');
+const participantList = document.getElementById('participants');
+const participantSel = document.getElementById('participantSel');
+
+const helpMsg = document.getElementById('helpMsg');
+const startBtn = document.getElementById('startBtn');
+
 startBtn.addEventListener('click', async () => {
     await app.start();
+    mainContent.classList.add('is-hidden');
+    document.body.style.backgroundColor = 'white';
+
     await app.updateContext();
 
     const isImmersive = app.isImmersive();
     if (!isImmersive) return;
 
-    mainContent.classList.add('is-hidden');
-
     settings.cast[0] = app.user;
+
     const others = app.participants.filter(
         (p) => p.participantId !== app.user.participantId
     );
 
     settings.cast.push(...others.splice(0, 2));
+
+    await draw(settings.cast, settings.color);
 });
 
 colorSel.addEventListener('change', async (e) => {
@@ -113,28 +127,40 @@ customColorInp.addEventListener(
 
 window.addEventListener(
     'resize',
-    debounce(async () => {
-        await app.clearScreen();
-        await draw(settings.cast, settings.color);
-    }, 1000)
+    debounce(
+        async () => {
+            await app.clearScreen();
+            await draw(settings.cast, settings.color);
+        },
+        firstRun ? 0 : 1000
+    )
 );
 
 app.sdk.onParticipantChange(handleParticipantChange);
+
+app.sdk.callZoomApi('onConnect', (e) => {
+    console.log('onConnect', e);
+});
 
 try {
     await app.init();
 
     const c = 'is-hidden';
 
-    if (!app.isImmersive()) {
+    if (app.isImmersive()) {
+        document.body.style.backgroundColor = 'white';
+    } else {
+        document.body.style.backgroundColor = settings.color;
         mainContent.classList.remove(c);
     }
 
     if (app.isInMeeting()) {
-        participantList.classList.remove(c);
         startBtn.classList.remove(c);
 
         helpMsg.classList.add(c);
+
+        participantList.classList.remove(c);
+        setParticipantSel(participantSel);
     }
 } catch (e) {
     console.error(e);

@@ -1,6 +1,6 @@
 import app from './immersive-app.js';
 
-function getDimensions() {
+function getQuadrantSize() {
     const device = {
         width: innerWidth * devicePixelRatio,
         height: innerHeight * devicePixelRatio,
@@ -62,7 +62,8 @@ export function getRoundRectPath(x, y, width, height, radius) {
 export function clipRoundRect(ctx, x, y, width, height, rad) {
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.fillStyle = '#FFF';
+    ctx.lineWidth = 0;
 
     const region = getRoundRectPath(x, y, width, height, rad);
 
@@ -99,16 +100,18 @@ export function drawText({
     size = 50,
     font = 'sans-serif',
 }) {
-    let y1 = y;
+    const ratio = size / 1000;
     const max = maxWidth - padding;
+    const lineHeight = max * ratio;
+
     const words = text.split(' ');
+
+    let y1 = y;
     let line = '';
 
     ctx.save();
-    ctx.font = `${size}px ${font}`;
+    ctx.font = `${lineHeight}px ${font}`;
     ctx.textAlign = 'center';
-
-    console.log(words);
 
     for (let i = 0; i < words.length; i++) {
         const str = `${words[i]} `;
@@ -118,7 +121,7 @@ export function drawText({
         if (i > 0 && width > max) {
             ctx.fillText(line, x, y1);
             line = str;
-            y1 += size;
+            y1 += lineHeight;
         } else {
             line = temp;
         }
@@ -156,15 +159,15 @@ async function drawQuadrant({
     const ctx = createCanvas(width, height);
     drawBackground(ctx, width, height, fill);
 
-    const w = Math.floor(width * 0.9);
+    const w = Math.floor(width * 0.85);
     const h = Math.floor((w * 9) / 16);
 
     let x, y;
     x = y = 0;
 
     const padding = 10 * devicePixelRatio;
-    let xPad = Math.max(width - (w + padding), 0);
-    let yPad = Math.max(height - (h + padding), 0);
+    let xPad = Math.max(width - (w + padding), 20);
+    let yPad = Math.max(height - (h + padding), 20);
 
     switch (idx) {
         case 1:
@@ -191,45 +194,43 @@ async function drawQuadrant({
     clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, rad);
 
     let textImage;
+
     const isText = idx === 3;
     if (isText) {
-        const tempCtx = createCanvas(width, height);
-        //drawBackground(tempCtx,w,h, 'white')
-
         const rw = Math.floor(w / 2);
-        const rh = Math.floor(w / 5);
-
-        drawRoundRect(tempCtx, xPad, yPad, w, h, rad, 'white');
-
-        let text =
-            'Ja morant broke his own franchise record with only 32 points just two days after setting it';
-        const wordPad = (h - rh) / 2;
-        const textSize = Math.floor(((w - wordPad) / 32) * devicePixelRatio);
-
-        drawText({
-            ctx: tempCtx,
-            text,
-            x: Math.floor(w / 2 + xPad),
-            y: yPad + wordPad,
-            padding: wordPad,
-            size: textSize,
-            maxWidth: w - wordPad,
-            font: 'Arial Black',
-        });
-
-        textImage = await getImageData(tempCtx, width, height);
+        const rh = Math.floor(w / 7);
 
         // Draw a rectangle behind our logo
-        const rr = Math.floor(rad / 2);
-        const rx = Math.floor(width - rw);
+        const rr = rad;
+        const rx = width - rw;
 
-        const distToBottom = height - h - rr;
-        const ry = Math.floor(height - (rh + distToBottom));
+        const distToBottom = height - h;
+        const ry = height - distToBottom - Math.floor(rh / 2);
 
         drawRoundRect(ctx, rx, ry, rw, rh, rr, fill);
 
         // draw our logo
-        await drawLogo(ctx, rx, ry, 0.3 * devicePixelRatio);
+        await drawLogo(ctx, rx, ry, 0.25 * devicePixelRatio);
+
+        const tempCtx = createCanvas(width, height);
+
+        let text =
+            'Ja morant broke his own franchise record with only 32 points just two days after setting it';
+        const wordPad = Math.floor((h - rh) / 2);
+        const size = 64;
+
+        drawText({
+            ctx: tempCtx,
+            text,
+            size,
+            x: Math.floor(w / 2) + xPad,
+            y: Math.floor(yPad / 2) + wordPad,
+            padding: wordPad,
+            maxWidth: w,
+            font: 'Arial Black',
+        });
+
+        textImage = await getImageData(tempCtx, width, height);
     }
 
     const imageData = await getImageData(ctx, width, height);
@@ -238,23 +239,22 @@ async function drawQuadrant({
         imageData,
         x: `${x}px`,
         y: `${y}px`,
-        zIndex: idx + 1,
+        zIndex: idx + 3,
     });
 
-    if (isText) {
-        return app.drawImage({
+    if (textImage)
+        await app.drawImage({
             imageData: textImage,
             x: `${x}px`,
             y: `${y}px`,
             zIndex: 1,
         });
-    }
-
-    // We need to divide out the scaling ratio for drawing participants
-    const vWidth = Math.floor(w / devicePixelRatio);
-    const vHeight = Math.floor(h / devicePixelRatio);
 
     if (participant?.participantId) {
+        // We need to divide out the scaling ratio for drawing participants
+        const vWidth = Math.floor(w / devicePixelRatio);
+        const vHeight = Math.floor(h / devicePixelRatio);
+
         return await app.drawParticipant({
             participantId: participant.participantId,
             x: `${xPos}px`,
@@ -267,14 +267,14 @@ async function drawQuadrant({
 }
 
 export async function drawIndex(idx, participant, fill) {
-    await drawQuadrant({ idx, participant, fill, ...getDimensions() });
+    await drawQuadrant({ idx, participant, fill, ...getQuadrantSize() });
 }
 
 export async function draw(participants, fill) {
-    const dimensions = getDimensions();
+    const dimensions = getQuadrantSize();
 
     // Iterate zIndexes - start at 1
-    for (let idx = 0; idx <= 4; idx++) {
+    for (let idx = 0; idx < 4; idx++) {
         const participant = participants[idx];
         await drawQuadrant({ idx, participant, fill, ...dimensions });
     }

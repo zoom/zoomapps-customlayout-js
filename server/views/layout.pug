@@ -11,10 +11,17 @@ html(lang="en")
         link(rel='stylesheet', href='/css/vendor/bulma.min.css')
         link(rel='stylesheet', href='/css/style.css')
     body
-        section.section.is-hidden#main
+        section.section
             div.container
-                block content
+                if isZoom
+                    div.is-hidden#main
+                        block content
+                else
+                    h1.title= title
+                    h2.subtitle You're viewing your Immersive Zoom App through the browser.&nbsp;
+                        a.is-underlined(href=`${installURL}`) Click Here
+                        | &nbsp;to install your app in Zoom
         if isZoom
             script(src='js/vendor/zoom-apps-js-sdk.0.13.0.js' type='application/javascript')
             script(src='/js/index.js' type='module')
-        noscript Javascript must be enabled to use this application
+    noscript Javascript must be enabled to use this application
