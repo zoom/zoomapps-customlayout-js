@@ -22,6 +22,7 @@ html(lang="en")
                         a.is-underlined(href=`${installURL}`) Click Here
                         | &nbsp;to install your app in Zoom
         if isZoom
+            canvas#uiCanvas
             script(src='js/vendor/zoom-apps-js-sdk.0.13.0.js' type='application/javascript')
             script(src='/js/index.js' type='module')
     noscript Javascript must be enabled to use this application

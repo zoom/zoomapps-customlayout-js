@@ -1,6 +1,11 @@
 import app from './lib/immersive-app.js';
 import { draw, drawIndex } from './lib/canvas.js';
 
+const canvas = document.getElementById('uiCanvas');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+const ctx = canvas.getContext('2d');
+
 const hiddenClass = 'is-hidden';
 
 const colors = {
@@ -15,7 +20,7 @@ const colors = {
 
 const settings = {
     cast: [],
-    text: "Hey there 👋  I'm just a sample topic. You can pick your own topic from the home page 🏠",
+    text: "Hey there 👋 I'm just a sample topic. You can pick your own topic from the home page 🏠",
     color: colors.blue,
 };
 
@@ -80,8 +85,20 @@ function setParticipantSel(el, participants) {
 
 async function handleDraw() {
     if (app.isImmersive()) {
+        const { width, height } = app.device;
+        canvas.width = width;
+        canvas.height = height;
+
         await app.clearScreen();
-        await draw(settings.cast, settings.color, settings.text);
+
+        await draw({
+            ctx,
+            width,
+            height,
+            participants: settings.cast,
+            fill: settings.color,
+            text: settings.text,
+        });
     }
 }
 
@@ -166,20 +183,20 @@ topicBtn.onclick = async () => {
 
     a.classList.add(c);
     a.innerText = topic;
-    a.onclick = async () => {
+    a.onclick = async (e) => {
         const siblings = a.parentElement.querySelectorAll(`a.${c}`);
         const activeClass = 'has-text-danger';
 
-        settings.text = a.innerText;
+        settings.text = e.target.innerText;
         await app.sdk.postMessage({ infoText: settings.text });
 
         for (const tag of siblings)
-            if (tag !== a) tag.classList.remove(activeClass);
+            if (tag !== e.target) tag.classList.remove(activeClass);
             else tag.classList.add(activeClass);
     };
 
     topicList.appendChild(a);
-    await app.sdk.postMessage({ a });
+    await app.sdk.postMessage({ addTopic: a });
 };
 
 app.sdk.onParticipantChange(handleParticipantChange);
@@ -231,8 +248,11 @@ app.sdk.onMessage(async ({ payload }) => {
 
 try {
     await app.init();
+    document.body.style.overflow = 'hidden';
 
-    app.onResize = debounce(handleDraw, 750);
+    startBtn.click();
+
+    app.onResize = debounce(handleDraw, 500);
 
     if (app.isInClient() && app.user.role === 'host') {
         applyBtn.classList.remove(hiddenClass);

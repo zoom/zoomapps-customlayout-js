@@ -1,18 +1,5 @@
 import app from './immersive-app.js';
 
-function getQuadrantSize() {
-    const { device } = app;
-    const w = device.width;
-    const h = device.height;
-
-    return {
-        width: Math.floor(w / 2),
-        height: Math.floor(h / 2),
-        xCenter: Math.floor(w / (devicePixelRatio * 2)),
-        yCenter: Math.floor(h / (devicePixelRatio * 2)),
-    };
-}
-
 function loadImage(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -22,22 +9,11 @@ function loadImage(src) {
     });
 }
 
-export function createCanvas(width, height) {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas.getContext('2d');
-}
-
 export function drawRect(ctx, x, y, width, height, fill) {
     ctx.save();
     ctx.fillStyle = fill;
     ctx.fillRect(x, y, width, height);
     ctx.restore();
-}
-
-export function drawBackground(ctx, width, height, fill) {
-    drawRect(ctx, 0, 0, width, height, fill);
 }
 
 export function getRoundRectPath(x, y, width, height, radius) {
@@ -89,16 +65,18 @@ export function drawRoundRect(ctx, x, y, width, height, rad, fill, stroke) {
     ctx.restore();
 }
 
-export function drawText({
-    ctx,
-    text,
-    x,
-    y,
-    maxWidth = 512,
-    padding = 0,
-    size = 50,
-    font = 'sans-serif',
-}) {
+export function drawText(options) {
+    const {
+        ctx,
+        text,
+        x,
+        y,
+        maxWidth = 512,
+        padding = 0,
+        size = 50,
+        font = 'sans-serif',
+    } = options;
+
     const ratio = size / 1000;
     const max = maxWidth - padding;
     const lineHeight = max * ratio;
@@ -144,72 +122,67 @@ export async function drawLogo(ctx, x, y, width, height) {
     ctx.drawImage(logo, x, y, w, h);
 }
 
-function getImageData(ctx, width, height) {
-    return new Promise((resolve, reject) => {
-        const imageData = ctx.getImageData(0, 0, width, height);
-        imageData ? resolve(imageData) : reject(`imageData is invalid`);
-    });
-}
+async function drawQuadrant(options) {
+    const { idx, ctx, fill, text = '', width, height, participant } = options;
 
-async function drawQuadrant({
-    idx,
-    fill,
-    text,
-    width,
-    height,
-    xCenter,
-    yCenter,
-    participant,
-}) {
-    console.log('drawing index', idx);
-    const ctx = createCanvas(width, height);
-    drawBackground(ctx, width, height, fill);
+    const quadrant = {
+        width: width / 2,
+        height: height / 2,
+    };
 
-    const w = Math.floor(width * 0.85);
-    const h = Math.floor((w * 9) / 16);
+    const center = {
+        x: Math.floor(quadrant.width),
+        y: Math.floor(quadrant.height),
+    };
+
+    const radius = quadrant.width * 0.15;
+
+    const w = quadrant.width * 0.85;
+    const h = (w * 9) / 16;
 
     let x, y;
     x = y = 0;
 
-    const padding = 10 * devicePixelRatio;
-    let xPad = Math.max(width - (w + padding), 20);
-    let yPad = Math.max(height - (h + padding), 20);
+    console.log('here');
+    const padding = 10;
+    let xPad = Math.floor(Math.max(quadrant.width - (w + padding), 20));
+    let yPad = Math.floor(Math.max(quadrant.height - (h + padding), 20));
 
     switch (idx) {
         case 1:
-            x = xCenter;
+            x = center.x;
             xPad = padding;
             break;
         case 2:
             yPad = padding;
-            y = yCenter;
+            y = center.y;
             break;
         case 3:
             xPad = padding;
             yPad = padding;
-            x = xCenter;
-            y = yCenter;
+            x = center.x;
+            y = center.y;
             break;
     }
 
-    const xPos = Math.floor(x + xPad / devicePixelRatio);
-    const yPos = Math.floor(y + yPad / devicePixelRatio);
+    const xPos = x + xPad;
+    const yPos = y + yPad;
 
-    const rad = Math.floor(width / 7);
+    drawRect(ctx, x, y, quadrant.width, quadrant.height, fill);
 
-    clipRoundRect(ctx, xPad, yPad, w - 1, h - 1, rad);
-
+    clipRoundRect(ctx, xPos, yPos, w - 1, h - 1, radius);
+    let imageData;
     const isText = idx === 3 && text;
     if (isText) {
-        const rw = Math.floor(w / 2);
-        const rh = Math.floor(w / 7);
+        const rw = w / 2;
+        const rh = w / 7;
 
         // Draw a rectangle behind our logo
-        const rr = rad;
-        const rx = width - rw;
+        const rr = radius;
+        const rx = x + (quadrant.width - rw);
 
-        const distToBottom = height - h;
-        const ry = height - distToBottom - Math.floor(rh / 2);
+        const distToBottom = quadrant.height - h;
+        const ry = y + (quadrant.height - distToBottom - Math.floor(rh / 2));
 
         drawRoundRect(ctx, rx, ry, rw, rh, rr, fill);
 
@@ -223,52 +196,85 @@ async function drawQuadrant({
             ctx,
             text,
             size,
-            x: Math.floor(w / 2) + xPad,
-            y: Math.floor(yPad / 2) + wordPad,
+            x: x + Math.floor(w / 2) + xPad,
+            y: y + Math.floor(yPad / 2) + wordPad,
             padding: wordPad,
             maxWidth: w,
             font: 'Arial Black',
         });
     }
 
-    const imageData = await getImageData(ctx, width, height);
+    imageData = ctx.getImageData(x, y, quadrant.width, quadrant.height);
 
-    await app.drawImage({
-        imageData,
-        x: `${x}px`,
-        y: `${y}px`,
-        zIndex: idx,
-    });
-
-    if (participant?.participantId) {
-        // We need to divide out the scaling ratio for drawing participants
-        const vWidth = Math.floor(w / devicePixelRatio);
-        const vHeight = Math.floor(h / devicePixelRatio);
-
-        return await app.drawParticipant({
-            participantId: participant.participantId,
-            x: `${xPos}px`,
-            y: `${yPos}px`,
-            width: `${vWidth}px`,
-            height: `${vHeight}px`,
+    return {
+        participant: {
+            participantId: participant?.participantId,
+            x: `${Math.floor(xPos / devicePixelRatio)}px`,
+            y: `${Math.floor(yPos / devicePixelRatio)}px`,
+            width: w,
+            height: h,
             zIndex: idx,
-        });
-    }
+        },
+        img: {
+            imageData,
+            x: `${Math.floor(x / devicePixelRatio)}px`,
+            y: `${Math.floor(y / devicePixelRatio)}px`,
+            zIndex: idx + 1,
+        },
+    };
 }
 
-export async function drawIndex(idx, participant, fill, text = '') {
-    await drawQuadrant({ idx, participant, text, fill, ...getQuadrantSize() });
+export async function drawIndex(options) {
+    const { ctx, idx, participant, fill, width, height, text = '' } = options;
+
+    await drawQuadrant({
+        ctx,
+        idx,
+        participant,
+        text,
+        fill,
+        width,
+        height,
+    });
 }
 
-export async function updateText(text, fill) {
-    return drawIndex({ idx: 3, text, fill, ...getQuadrantSize() });
+export async function updateText(options) {
+    const { text, fill, width, height } = options;
+    return drawIndex({ idx: 3, text, fill, width, height });
 }
 
-export async function draw(participants, fill, text = '') {
-    const dimensions = getQuadrantSize();
+export async function draw(options) {
+    const { ctx, width, height, participants, fill, text = '' } = options;
+
+    const data = [];
 
     for (let idx = 0; idx < 4; idx++) {
-        const participant = participants[idx];
-        await drawQuadrant({ idx, participant, text, fill, ...dimensions });
+        let participant;
+        if (participants[idx]) participant = participants[idx];
+
+        const d = await drawQuadrant({
+            ctx,
+            idx,
+            participant,
+            text,
+            fill,
+            width,
+            height,
+        });
+
+        if (d) data.push(d);
     }
+
+    for (let i = 0; i < data.length; i++) {
+        const img = data[i].img;
+        console.log('idx', img);
+
+        if (img.imageData) await app.drawImage(img);
+
+        const participant = data[i].participant;
+
+        if (participant.participantId) await app.drawParticipant(participant);
+    }
+
+    ctx.clearRect(0, 0, width, height);
 }
