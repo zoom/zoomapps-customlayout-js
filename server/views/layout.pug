@@ -24,6 +24,7 @@ html(lang="en")
         if isZoom
             canvas#uiCanvas
             img#logo(src='/img/zoom.png')
-            script(src='js/vendor/zoom-apps-js-sdk.0.13.0.js' type='application/javascript')
+            script(src='/js/vendor/zoom-apps-js-sdk.0.13.0.js' type='application/javascript')
+            script(src='/socket.io/socket.io.js')
             script(src='/js/index.js' type='module')
     noscript Javascript must be enabled to use this application

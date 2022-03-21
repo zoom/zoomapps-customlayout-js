@@ -30,7 +30,8 @@
     "mongoose": "^6.2.3",
     "mongoose-encryption": "^2.1.2",
     "morgan": "~1.10.0",
-    "pug": "^3.0.2"
+    "pug": "^3.0.2",
+    "socket.io": "^4.4.1"
   },
   "devDependencies": {
     "eslint": "^8.9.0",

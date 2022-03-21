@@ -33,7 +33,7 @@ const app = express();
 const dbg = debug(`${appName}:app`);
 
 // CSP directives
-const redirectOrigin = new URL(redirectUri).origin;
+const redirectHost = new URL(redirectUri).host;
 
 // views and assets
 const publicDir = dirname('public');
@@ -92,10 +92,11 @@ app.use(
                 ],
                 scriptSrc: [
                     "'self'",
+                    'https://cdn.socket.io',
                     (req, res) => `'nonce-${res.locals.cspNonce}'`,
                 ],
-                imgSrc: ["'self'", redirectOrigin],
-                'connect-src': 'self',
+                imgSrc: ["'self'", `https://${redirectHost}`],
+                'connect-src': ["'self'", `wss://${redirectHost}`],
                 'base-uri': 'self',
                 'form-action': 'self',
             },

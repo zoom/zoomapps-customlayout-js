@@ -95,6 +95,7 @@ class ImmersiveApp {
                 'drawImage',
                 'drawParticipant',
                 'getMeetingParticipants',
+                'getMeetingUUID',
                 'getRunningContext',
                 'getUserContext',
                 'onConnect',
@@ -116,9 +117,11 @@ class ImmersiveApp {
         if (this.isInMeeting()) {
             this.user = await this.sdk.getUserContext();
 
-            // Store current participants
-            const { participants } = await this.sdk.getMeetingParticipants();
-            this.#participants = participants;
+            if (this.user.role === 'host') {
+                const { participants } =
+                    await this.sdk.getMeetingParticipants();
+                this.#participants = participants;
+            }
         }
 
         return conf;
@@ -141,6 +144,7 @@ class ImmersiveApp {
 
     async updateContext() {
         this.#context = await this.sdk.getRunningContext();
+        return this.#context;
     }
 
     isInMeeting() {
