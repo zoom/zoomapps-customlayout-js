@@ -59,12 +59,18 @@ class ImmersiveApp {
         this.#video.state = state ?? (width !== 0 && height !== 0);
         if (width) this.#video.width = width;
         if (height) this.#video.height = height;
-
-        console.log('video', this.#video);
     }
 
     get participants() {
         return this.#participants;
+    }
+
+    get drawnImages() {
+        return this.#drawnImages;
+    }
+
+    get drawnParticipants() {
+        return this.#drawnParticipants;
     }
 
     get user() {
@@ -88,7 +94,6 @@ class ImmersiveApp {
                 'connect',
                 'drawImage',
                 'drawParticipant',
-                'endSyncData',
                 'getMeetingParticipants',
                 'getRunningContext',
                 'getUserContext',
@@ -165,33 +170,25 @@ class ImmersiveApp {
         return imageId;
     }
 
+    async clearImage(imageId) {
+        const i = this.#drawnImages.indexOf(imageId);
+        this.#drawnImages.splice(i, 1);
+
+        return this.sdk.clearImage({ imageId });
+    }
+
     async clearAllImages() {
-        while (this.#drawnImages.length) {
+        while (this.#drawnImages.length > 0) {
             const imageId = this.#drawnImages.pop();
             await this.sdk.clearImage({ imageId });
         }
     }
 
-    async clearAllParticipants() {
-        while (this.#drawnParticipants.length) {
-            const participantId = this.#drawnParticipants.pop();
-            this.sdk.clearParticipant({ participantId });
-        }
-    }
-
     async clearParticipant(participantId) {
-        await this.sdk.clearParticipant({ participantId });
         const i = this.#drawnParticipants.indexOf(participantId);
         this.#drawnParticipants.splice(i, 1);
-    }
 
-    async clearScreen() {
-        await this.clearAllParticipants();
-        await this.clearAllImages();
-    }
-
-    inviteAllParticipants() {
-        return this.sdk.sendAppInvitationToAllParticipants();
+        return this.sdk.clearParticipant({ participantId });
     }
 }
 

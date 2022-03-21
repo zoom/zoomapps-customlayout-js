@@ -1,33 +1,34 @@
 extends layout
 
 block content
-    h1.title.has-text-centered Immersive Zoom App
-    h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
-    .columns
-        .column.is-two-fifths
-            .field
-                label.label(for='colorSel') Choose a Color:&nbsp
-                .control
-                    .select
-                        select#colorSel(name='colors')
-                            option(value='black') Black
-                            option(value='blue' selected) Blue
-                            option(value='green') Green
-                            option(value='grey') Grey
-                            option(value='red') Red
-                            option(value='white') White
-                            option(value='yellow') Yellow
-        .column.is-two-fifths
-            .field
-                label.label(for='custColorInp') Custom Color:&nbsp
-                .control
-                    input.input#custColorInp(type='text' name='custColorInp' placeholder='HTML Canvas Fill Style')
-    .is-hidden#participants
+    h1.title.has-text-centered Immersive Zoom App Sample
+    h2.subtitle.has-text-centered#helpMsg Open this app in a Meeting to use it
+    .is-hidden#controls
+        .columns
+            .column.is-two-fifths
+                .field
+                    label.label(for='colorSel') Choose a Color:&nbsp
+                    .control
+                        .select
+                            select#colorSel(name='colors')
+                                option(value='black') Black
+                                option(value='blue' selected) Blue
+                                option(value='green') Green
+                                option(value='grey') Grey
+                                option(value='red') Red
+                                option(value='white') White
+                                option(value='yellow') Yellow
+            .column.is-two-fifths
+                .field
+                    label.label(for='custColorInp') Custom Color:&nbsp
+                    .control
+                        input.input#custColorInp(type='text' name='custColorInp' placeholder='HTML Canvas Fill Style')
+    .is-hidden#hostControls
         .columns
             .column.is-two-fifths
                 label.label(for='topicInp') Add Topics
-                .field.has-addons.has-addons-fullwidth
-                    .control.is-expanded
+                .field.has-addons
+                    .control
                         input.input.is-fullwidth#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
                     .control
                         a.button#topicBtn
@@ -46,8 +47,8 @@ block content
                 .columns
                     .column
                         .control
-                            button.button.is-fullwidth.is-hidden#applyBtn Apply
+                            button.button.is-fullwidth#setCastBtn Show Participants
         .columns
             .column
                 .control
-                    button.button.is-hidden.is-fullwidth#startBtn Start
+                    button.button.is-hidden#startBtn Start

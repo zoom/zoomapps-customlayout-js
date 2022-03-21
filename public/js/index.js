@@ -22,6 +22,23 @@ const settings = {
     color: colors.blue,
 };
 
+const content = document.getElementById('main');
+const controls = document.getElementById('controls');
+const hostControls = document.getElementById('hostControls');
+
+const colorSel = document.getElementById('colorSel');
+const custColorInp = document.getElementById('custColorInp');
+
+const participantSel = document.getElementById('participantSel');
+
+const helpMsg = document.getElementById('helpMsg');
+
+const startBtn = document.getElementById('startBtn');
+const topicBtn = document.getElementById('topicBtn');
+
+const topicInp = document.getElementById('topicInp');
+const topicList = document.getElementById('topicList');
+
 function debounce(fn, ms = 250) {
     let timer;
     return (...args) => {
@@ -33,25 +50,17 @@ function debounce(fn, ms = 250) {
     };
 }
 
-const mainContent = document.getElementById('main');
-
-const colorSel = document.getElementById('colorSel');
-const customColorInp = document.getElementById('custColorInp');
-
-const participantList = document.getElementById('participants');
-const participantSel = document.getElementById('participantSel');
-
-const helpMsg = document.getElementById('helpMsg');
-
-const startBtn = document.getElementById('startBtn');
-const applyBtn = document.getElementById('applyBtn');
-
-const topicBtn = document.getElementById('topicBtn');
-const topicInp = document.getElementById('topicInp');
-const topicList = document.getElementById('topicList');
-
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function showEl(el) {
+    el.classList.remove(hiddenClass);
+    console.log(el);
+}
+
+function hideEl(el) {
+    el.classList.add(hiddenClass);
 }
 
 async function handleParticipantChange({ participants }) {
@@ -70,23 +79,11 @@ async function handleParticipantChange({ participants }) {
         if (part.status === 'join') {
             app.participants.push(p);
 
-            const idx = settings.cast.length - 1;
-            if (idx >= 2) return;
+            const idx = settings.cast.length;
+            if (idx >= 3) return;
 
             settings.cast.push(p);
-
-            const { img, participant } = await drawQuadrant({
-                ctx,
-                idx,
-                participant: p,
-            });
-
-            if (participant?.participantId)
-                await app.sdk.drawParticipant(participant);
-
-            if (img?.imageData) await app.sdk.drawImage(img);
-
-            clearCanvas();
+            await redrawParticipant(idx, p);
         } else if (i !== -1) {
             app.participants.splice(i, 1);
             const idx = settings.cast.findIndex(predicate);
@@ -98,8 +95,8 @@ async function handleParticipantChange({ participants }) {
     }
 }
 
-function setParticipantSel(el, participants) {
-    if (participants) helpMsg.classList.add(hiddenClass);
+function setParticipantSel(participants) {
+    const el = participantSel;
 
     for (let i = 0; i < el.children.length; i++) el.remove(i);
 
@@ -118,14 +115,14 @@ async function handleDraw() {
         const width = innerWidth * devicePixelRatio;
         const height = innerHeight * devicePixelRatio;
 
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-
         canvas.width = width;
         canvas.height = height;
+
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
         ctx.fillStyle = settings.color;
 
-        await app.clearScreen();
+        await app.clearAllImages();
 
         const data = await draw({
             ctx,
@@ -133,26 +130,100 @@ async function handleDraw() {
             text: settings.text,
         });
 
-        for (let i = 0; i < data.length - 1; i++) {
-            const p = data[i].participant;
-            if (p?.participantId) await app.drawParticipant(p);
-        }
-
         for (let i = 0; i < data.length; i++) {
-            const img = data[i].img;
+            const p = data[i].participant;
 
-            if (img?.imageData) await app.drawImage(img);
+            if (i < data.length - 1 && p?.participantId)
+                await app.drawParticipant(p);
+
+            const img = data[i].img;
+            await app.drawImage(img);
         }
 
-        // now that we saved our images to Zoom clear the on-page canvas
         clearCanvas();
     }
+}
+
+async function redrawText(text) {
+    const idx = 3;
+
+    const { img } = await drawQuadrant({
+        idx,
+        ctx,
+        text,
+    });
+
+    const oldId = app.drawnImages[idx];
+    if (oldId) await app.clearImage(oldId);
+
+    if (img?.imageData) await app.drawImage(img);
+
+    clearCanvas();
+}
+
+async function redrawParticipant(idx, p) {
+    const { img, participant } = await drawQuadrant({
+        ctx,
+        idx,
+        participant: p,
+    });
+
+    if (img?.imageData) await app.drawImage(img);
+
+    if (participant?.participantId) await app.drawParticipant(participant);
+
+    clearCanvas();
+}
+
+function showElements() {
+    const { style } = document.body;
+
+    if (app.isImmersive()) {
+        style.backgroundColor = 'white';
+        style.overflow = 'hidden';
+    } else {
+        style.backgroundColor = settings.color;
+        showEl(content);
+    }
+
+    if (app.isInMeeting()) {
+        showEl(controls);
+        showEl(startBtn);
+        hideEl(helpMsg);
+    }
+
+    if (app.user.role === 'host') {
+        showEl(hostControls);
+        setParticipantSel(app.participants);
+    }
+}
+
+function createTopic(text) {
+    const a = document.createElement('a');
+    const c = 'panel-block';
+
+    a.classList.add(c);
+    a.innerText = text;
+    a.onclick = async (e) => {
+        const siblings = a.parentElement.querySelectorAll(`a.${c}`);
+        const activeClass = 'has-text-primary';
+
+        settings.text = e.target.innerText;
+        await app.sdk.postMessage({ setTopic: settings.text });
+
+        for (const tag of siblings)
+            if (tag !== e.target) tag.classList.remove(activeClass);
+            else tag.classList.add(activeClass);
+    };
+
+    topicList.appendChild(a);
 }
 
 startBtn.onclick = async () => {
     await app.start();
 
-    mainContent.classList.add('is-hidden');
+    hideEl(content);
+
     document.body.style.backgroundColor = 'white';
 
     await app.updateContext();
@@ -170,7 +241,7 @@ startBtn.onclick = async () => {
 };
 
 colorSel.onchange = async (e) => {
-    if (customColorInp.innerText.length > 0) return;
+    if (custColorInp.innerText.length > 0) return;
 
     const color = colors[e.target.value];
     if (!color) return;
@@ -183,7 +254,7 @@ colorSel.onchange = async (e) => {
     });
 };
 
-customColorInp.onchange = debounce(async (e) => {
+custColorInp.onchange = debounce(async (e) => {
     const { value } = e.target;
     if (value.length > 0) {
         settings.color = value;
@@ -208,50 +279,64 @@ topicBtn.onclick = async () => {
 
     if (!topic) return;
 
-    const a = document.createElement('a');
-    const c = 'panel-block';
+    createTopic(topic);
 
-    a.classList.add(c);
-    a.innerText = topic;
-    a.onclick = async (e) => {
-        const siblings = a.parentElement.querySelectorAll(`a.${c}`);
-        const activeClass = 'has-text-danger';
-
-        settings.text = e.target.innerText;
-        await app.sdk.postMessage({ infoText: settings.text });
-
-        for (const tag of siblings)
-            if (tag !== e.target) tag.classList.remove(activeClass);
-            else tag.classList.add(activeClass);
-    };
-
-    topicList.appendChild(a);
-    await app.sdk.postMessage({ addTopic: a });
+    await app.sdk.postMessage({ addTopic: topic });
 };
 
 app.sdk.onParticipantChange(handleParticipantChange);
 
-app.sdk.onMeeting(({ action }) => {
-    if (action === 'ended') {
-        participantList.classList.add(hiddenClass);
-        window.location.reload();
-    }
+app.sdk.onConnect(async () => {
+    const idx = colorSel.selectedIndex;
+    await app.sdk.postMessage({
+        participants: app.participants,
+        color: colorSel.options[idx].text.toLowerCase(),
+        custColor: custColorInp.value,
+        isHost: app.user.role === 'host',
+    });
+});
+
+app.sdk.onMeeting(async ({ action }) => {
+    let payload;
+    if (action === 'started') payload = { started: true };
+    app.sdk.postMessage(payload);
 });
 
 app.sdk.onMessage(async ({ payload }) => {
     console.log(payload);
-    const { participants, color, custColor, infoText, addTopic } = payload;
+    const {
+        isHost,
+        started,
+        ended,
+        participants,
+        color,
+        custColor,
+        setTopic,
+        addTopic,
+    } = payload;
+
+    if (started) {
+        showEl(controls);
+    } else if (ended) {
+        hideEl(controls);
+        hideEl(hostControls);
+    }
+
+    if (isHost) {
+        showEl(hostControls);
+        setParticipantSel(app.participants);
+    }
 
     if (participants) {
-        console.log(participants);
-        participantList.classList.remove(hiddenClass);
-        setParticipantSel(participantSel, participants);
+        helpMsg.classList.add(hiddenClass);
+        controls.classList.remove(hiddenClass);
+        setParticipantSel(participants);
     }
 
     if (custColor) {
         colorSel.setAttribute('disabled', '');
         settings.color = custColor;
-        customColorInp.value = custColor;
+        custColorInp.value = custColor;
     } else {
         colorSel.removeAttribute('disabled');
     }
@@ -265,55 +350,23 @@ app.sdk.onMessage(async ({ payload }) => {
         if (app.isImmersive()) debounce(handleDraw());
         else document.body.style.backgroundColor = settings.color;
 
-    if (addTopic) {
-        const a = document.createElement('a');
-        a.innerText = addTopic.innerText;
-        a.onclick = addTopic.onclick;
-        a.classList = addTopic.classList;
-        topicList.appendChild(a);
-    }
+    if (addTopic) createTopic(addTopic);
 
-    if (infoText && app.isImmersive()) await infoText(infoText, settings.color);
+    if (setTopic && app.isImmersive()) {
+        settings.text = setTopic;
+        await redrawText(setTopic);
+    }
 });
 
-window.onresize = debounce(handleDraw, 500);
+window.onresize = debounce(handleDraw, 1000);
 
 try {
     await app.init();
+    if (!app.isInClient()) await app.sdk.connect();
 
-    startBtn.click();
+    showElements();
 
-    if (app.isInClient() && app.user.role === 'host') {
-        applyBtn.classList.remove(hiddenClass);
-    }
-
-    if (app.isImmersive()) {
-        await handleDraw();
-        document.body.style.backgroundColor = 'white';
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.body.style.backgroundColor = settings.color;
-        mainContent.classList.remove(hiddenClass);
-    }
-
-    if (app.isInMeeting()) {
-        startBtn.classList.remove(hiddenClass);
-
-        if (app.user.role === 'host')
-            participantList.classList.remove(hiddenClass);
-        setParticipantSel(participantSel, app.participants);
-    }
-
-    if (!app.isInClient()) {
-        await app.sdk.connect();
-
-        await app.sdk.postMessage({
-            participants: app.participants,
-            color: Object.keys(colors).find(
-                (key) => colors[key] === settings.color
-            ),
-        });
-    }
+    if (app.isImmersive()) await handleDraw();
 } catch (e) {
     console.error(e);
 }
