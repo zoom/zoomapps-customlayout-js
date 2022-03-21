@@ -184,6 +184,13 @@ class ImmersiveApp {
         }
     }
 
+    async clearAllParticipants() {
+        while (this.#drawnParticipants.length > 0) {
+            const participantId = this.#drawnParticipants.pop();
+            await this.sdk.clearParticipant({ participantId });
+        }
+    }
+
     async clearParticipant(participantId) {
         const i = this.#drawnParticipants.indexOf(participantId);
         this.#drawnParticipants.splice(i, 1);

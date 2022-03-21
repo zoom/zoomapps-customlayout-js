@@ -5,6 +5,10 @@ html, body {
     overflow-y: hidden;
 }
 
+#logo {
+    display: none;
+}
+
 #uiCanvas {
     position:fixed;
     left:0;
