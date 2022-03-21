@@ -1,9 +1,7 @@
 import app from './lib/immersive-app.js';
-import { draw, drawIndex } from './lib/canvas.js';
+import { draw, drawQuadrant } from './lib/canvas.js';
 
 const canvas = document.getElementById('uiCanvas');
-canvas.width = innerWidth;
-canvas.height = innerHeight;
 const ctx = canvas.getContext('2d');
 
 const hiddenClass = 'is-hidden';
@@ -20,7 +18,7 @@ const colors = {
 
 const settings = {
     cast: [],
-    text: "Hey there 👋 I'm just a sample topic. You can pick your own topic from the home page 🏠",
+    text: 'Hey there 👋 You can create your own topic from the home page',
     color: colors.blue,
 };
 
@@ -33,6 +31,27 @@ function debounce(fn, ms = 250) {
             fn.apply(this, args);
         }, ms);
     };
+}
+
+const mainContent = document.getElementById('main');
+
+const colorSel = document.getElementById('colorSel');
+const customColorInp = document.getElementById('custColorInp');
+
+const participantList = document.getElementById('participants');
+const participantSel = document.getElementById('participantSel');
+
+const helpMsg = document.getElementById('helpMsg');
+
+const startBtn = document.getElementById('startBtn');
+const applyBtn = document.getElementById('applyBtn');
+
+const topicBtn = document.getElementById('topicBtn');
+const topicInp = document.getElementById('topicInp');
+const topicList = document.getElementById('topicList');
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 async function handleParticipantChange({ participants }) {
@@ -51,12 +70,23 @@ async function handleParticipantChange({ participants }) {
         if (part.status === 'join') {
             app.participants.push(p);
 
-            const len = settings.cast.length;
-            if (len >= 3) return;
+            const idx = settings.cast.length - 1;
+            if (idx >= 2) return;
 
             settings.cast.push(p);
 
-            await drawIndex(len, p, settings.color);
+            const { img, participant } = await drawQuadrant({
+                ctx,
+                idx,
+                participant: p,
+            });
+
+            if (participant?.participantId)
+                await app.sdk.drawParticipant(participant);
+
+            if (img?.imageData) await app.sdk.drawImage(img);
+
+            clearCanvas();
         } else if (i !== -1) {
             app.participants.splice(i, 1);
             const idx = settings.cast.findIndex(predicate);
@@ -85,39 +115,39 @@ function setParticipantSel(el, participants) {
 
 async function handleDraw() {
     if (app.isImmersive()) {
-        const { width, height } = app.device;
+        const width = innerWidth * devicePixelRatio;
+        const height = innerHeight * devicePixelRatio;
+
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+
         canvas.width = width;
         canvas.height = height;
+        ctx.fillStyle = settings.color;
 
         await app.clearScreen();
 
-        await draw({
+        const data = await draw({
             ctx,
-            width,
-            height,
             participants: settings.cast,
-            fill: settings.color,
             text: settings.text,
         });
+
+        for (let i = 0; i < data.length - 1; i++) {
+            const p = data[i].participant;
+            if (p?.participantId) await app.drawParticipant(p);
+        }
+
+        for (let i = 0; i < data.length; i++) {
+            const img = data[i].img;
+
+            if (img?.imageData) await app.drawImage(img);
+        }
+
+        // now that we saved our images to Zoom clear the on-page canvas
+        clearCanvas();
     }
 }
-
-const mainContent = document.getElementById('main');
-
-const colorSel = document.getElementById('colorSel');
-const customColorInp = document.getElementById('custColorInp');
-
-const participantList = document.getElementById('participants');
-const participantSel = document.getElementById('participantSel');
-
-const helpMsg = document.getElementById('helpMsg');
-
-const startBtn = document.getElementById('startBtn');
-const applyBtn = document.getElementById('applyBtn');
-
-const topicBtn = document.getElementById('topicBtn');
-const topicInp = document.getElementById('topicInp');
-const topicList = document.getElementById('topicList');
 
 startBtn.onclick = async () => {
     await app.start();
@@ -246,20 +276,21 @@ app.sdk.onMessage(async ({ payload }) => {
     if (infoText && app.isImmersive()) await infoText(infoText, settings.color);
 });
 
+window.onresize = debounce(handleDraw, 500);
+
 try {
     await app.init();
-    document.body.style.overflow = 'hidden';
 
     startBtn.click();
-
-    app.onResize = debounce(handleDraw, 500);
 
     if (app.isInClient() && app.user.role === 'host') {
         applyBtn.classList.remove(hiddenClass);
     }
 
     if (app.isImmersive()) {
+        await handleDraw();
         document.body.style.backgroundColor = 'white';
+        document.body.style.overflow = 'hidden';
     } else {
         document.body.style.backgroundColor = settings.color;
         mainContent.classList.remove(hiddenClass);

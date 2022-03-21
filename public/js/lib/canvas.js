@@ -1,5 +1,3 @@
-import app from './immersive-app.js';
-
 function loadImage(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -75,6 +73,8 @@ export function drawText(options) {
         padding = 0,
         size = 50,
         font = 'sans-serif',
+        fill = 'black',
+        align = 'center',
     } = options;
 
     const ratio = size / 1000;
@@ -88,7 +88,8 @@ export function drawText(options) {
 
     ctx.save();
     ctx.font = `${lineHeight}px ${font}`;
-    ctx.textAlign = 'center';
+    ctx.fillStyle = fill;
+    ctx.textAlign = align;
 
     for (let i = 0; i < words.length; i++) {
         const str = `${words[i]} `;
@@ -122,8 +123,13 @@ export async function drawLogo(ctx, x, y, width, height) {
     ctx.drawImage(logo, x, y, w, h);
 }
 
-async function drawQuadrant(options) {
-    const { idx, ctx, fill, text = '', width, height, participant } = options;
+export async function drawQuadrant(options) {
+    const { idx, ctx, text = '', participant } = options;
+
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+
+    const fill = ctx.fillStyle;
 
     const quadrant = {
         width: width / 2,
@@ -135,18 +141,27 @@ async function drawQuadrant(options) {
         y: Math.floor(quadrant.height),
     };
 
-    const radius = quadrant.width * 0.15;
-
-    const w = quadrant.width * 0.85;
-    const h = (w * 9) / 16;
-
-    let x, y;
+    let x, y, w, h;
     x = y = 0;
 
-    console.log('here');
-    const padding = 10;
-    let xPad = Math.floor(Math.max(quadrant.width - (w + padding), 20));
-    let yPad = Math.floor(Math.max(quadrant.height - (h + padding), 20));
+    let qw = quadrant.width;
+    const padding = Math.max(quadrant.width, quadrant.height) / 100;
+    const doublePadding = padding * 2;
+
+    do {
+        w = qw * 0.85;
+        h = (w * 9) / 16;
+        --qw;
+    } while (h + doublePadding > quadrant.height);
+
+    const radius = Math.min(qw, h) * 0.3;
+
+    let xPad = Math.floor(
+        Math.max(quadrant.width - (w + padding), padding * 2)
+    );
+    let yPad = Math.floor(
+        Math.max(quadrant.height - (h + padding), padding * 2)
+    );
 
     switch (idx) {
         case 1:
@@ -170,25 +185,16 @@ async function drawQuadrant(options) {
 
     drawRect(ctx, x, y, quadrant.width, quadrant.height, fill);
 
-    clipRoundRect(ctx, xPos, yPos, w - 1, h - 1, radius);
+    clipRoundRect(ctx, xPos, yPos, w, h, radius);
+
     let imageData;
     const isText = idx === 3 && text;
     if (isText) {
-        const rw = w / 2;
-        const rh = w / 7;
-
         // Draw a rectangle behind our logo
-        const rr = radius;
-        const rx = x + (quadrant.width - rw);
+        const rw = Math.max(w, h) / 2;
+        const rh = Math.max(w, h) / 7;
 
-        const distToBottom = quadrant.height - h;
-        const ry = y + (quadrant.height - distToBottom - Math.floor(rh / 2));
-
-        drawRoundRect(ctx, rx, ry, rw, rh, rr, fill);
-
-        // draw our logo
-        await drawLogo(ctx, rx, ry - padding, rw, rh);
-
+        // Draw Text
         const wordPad = Math.floor((h - rh) / 2);
         const size = 64;
 
@@ -202,6 +208,16 @@ async function drawQuadrant(options) {
             maxWidth: w,
             font: 'Arial Black',
         });
+
+        const rx = x + (qw - rw);
+
+        const distToBottom = quadrant.height - h;
+        const ry = y + (quadrant.height - distToBottom - Math.floor(rh / 2));
+
+        drawRoundRect(ctx, rx, ry, rw, rh, radius, fill);
+
+        // draw our logo
+        await drawLogo(ctx, rx, ry, rw, rh);
     }
 
     imageData = ctx.getImageData(x, y, quadrant.width, quadrant.height);
@@ -224,27 +240,8 @@ async function drawQuadrant(options) {
     };
 }
 
-export async function drawIndex(options) {
-    const { ctx, idx, participant, fill, width, height, text = '' } = options;
-
-    await drawQuadrant({
-        ctx,
-        idx,
-        participant,
-        text,
-        fill,
-        width,
-        height,
-    });
-}
-
-export async function updateText(options) {
-    const { text, fill, width, height } = options;
-    return drawIndex({ idx: 3, text, fill, width, height });
-}
-
 export async function draw(options) {
-    const { ctx, width, height, participants, fill, text = '' } = options;
+    const { ctx, participants, fill, text = '' } = options;
 
     const data = [];
 
@@ -258,23 +255,10 @@ export async function draw(options) {
             participant,
             text,
             fill,
-            width,
-            height,
         });
 
         if (d) data.push(d);
     }
 
-    for (let i = 0; i < data.length; i++) {
-        const img = data[i].img;
-        console.log('idx', img);
-
-        if (img.imageData) await app.drawImage(img);
-
-        const participant = data[i].participant;
-
-        if (participant.participantId) await app.drawParticipant(participant);
-    }
-
-    ctx.clearRect(0, 0, width, height);
+    return data;
 }

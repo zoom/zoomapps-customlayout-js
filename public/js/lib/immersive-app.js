@@ -16,13 +16,6 @@ class ImmersiveApp {
         height: 0,
     };
 
-    #device = {
-        width: 0,
-        height: 0,
-    };
-
-    #onResize = () => {};
-
     #drawnImages = [];
     #drawnParticipants = [];
     #participants = [];
@@ -40,19 +33,9 @@ class ImmersiveApp {
             if (!this.sdk)
                 throw new Error('Zoom App JS SDK is not loaded on the page');
 
-            this.sdk.onMyMediaChange(async (e) => {
-                this.video = e.media.video;
-                console.log('Media Changed', e);
-            });
-
-            window.addEventListener('resize', () => {
-                this.#device = {
-                    width: innerWidth * devicePixelRatio,
-                    height: innerHeight * devicePixelRatio,
-                };
-
-                this.#onResize();
-            });
+            this.sdk.onMyMediaChange(
+                async ({ media: video }) => (this.video = video)
+            );
 
             ImmersiveApp.#instance = this;
         }
@@ -80,25 +63,12 @@ class ImmersiveApp {
         console.log('video', this.#video);
     }
 
-    get device() {
-        return this.#device;
-    }
-
     get participants() {
         return this.#participants;
     }
 
     get user() {
         return this.#user;
-    }
-
-    set onResize(fn) {
-        if (typeof fn !== 'function') return;
-        this.#onResize = fn;
-    }
-
-    get onResize() {
-        return this.#onResize;
     }
 
     set user({ participantId, role, screenName }) {
