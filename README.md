@@ -1,8 +1,9 @@
-# Hello Zoom Apps
+# Immersive Zoom App Sample
 
 Use of this sample app is subject to our [Terms of Use](https://zoom.us/docs/en-us/zoom_api_license_and_tou.html)
 
-Zoom Apps let you embed your application directly in the Zoom Client. Use this template to make something awesome!
+This app is an example of how you can use the Zoom Layers API to create an Immersive Zoom App the captivates your
+audience and presenters alike.
 
 ## Prerequisites
 
@@ -21,13 +22,13 @@ You can follow [this guide]() to create a Zoom App with the [Zoom Marketplace](h
 To get started clone the repo:
 
 ```shell
-git clone https://github.com/zoom/hello-zoom-apps.git
+git clone https://github.com/zoom/immersive-za-sample.git
 ```
 
-Once cloned navigate to the `hello-zoom-app` directory:
+Once cloned navigate to the `immsersive-za-sample` directory:
 
 ```
-cd hello-zoom-apps
+cd immersive-za-sample
 ```
 
 Then install dependencies. Docker will do this within the container, but it's useful to have local packages for
