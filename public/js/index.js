@@ -81,8 +81,8 @@ function debounce(fn, ms = 250) {
 async function handleDraw() {
     if (app.isImmersive()) {
         // use clientWidth to account for MSFT Windows
-        const width = document.body.clientWidth * devicePixelRatio;
-        const height = document.body.clientHeight * devicePixelRatio;
+        const width = innerWidth * devicePixelRatio;
+        const height = innerHeight * devicePixelRatio;
 
         canvas.style.width = '100%';
         canvas.style.height = '100%';
@@ -94,16 +94,15 @@ async function handleDraw() {
 
         console.log(settings.cast);
 
+        // I clear the screen before drawing to avoid visual glitches on fast machines
+        await app.clearAllParticipants();
+        await app.clearAllImages();
+
         const data = await draw({
             ctx,
             participants: settings.cast,
             text: settings.text,
         });
-
-        console.log(data);
-
-        await app.clearAllParticipants();
-        await app.clearAllImages();
 
         for (let i = 0; i < data.length; i++) {
             const { participant, img } = data[i];
@@ -152,8 +151,7 @@ async function handleUpdate({ topic, participants, color }) {
             cast.push(p);
 
             if (app.isImmersive() && hasImages && !changes.color)
-                console.log('redrawing', i, p);
-            await redrawParticipant(i, p);
+                await redrawParticipant(i, p);
         }
 
         settings.cast = cast;
@@ -280,38 +278,6 @@ function createTopic(text) {
     topicList.appendChild(a);
 }
 
-async function handleParticipantChange({ participants }) {
-    for (const part of participants) {
-        const p = {
-            screenName: part.screenName,
-            participantId: part.participantId.toString(),
-            role: part.role,
-        };
-
-        const predicate = ({ participantId }) =>
-            participantId === p.participantId;
-
-        const i = app.participants.indexOf(predicate);
-
-        if (part.status === 'leave' && i !== -1) {
-            app.participants.splice(i, 1);
-            const idx = settings.cast.findIndex(p.participantId);
-
-            if (idx === -1) return;
-            settings.cast.splice(idx, 1);
-
-            if (app.isImmersive()) await app.clearParticipant(p.participantId);
-        } else {
-            app.participants.push(p);
-        }
-    }
-
-    app.sdk.postMessage({ participants: app.participants });
-    setCastSelect(app.participants);
-}
-
-startBtn.onclick = start;
-
 colorSel.onchange = async (e) => {
     if (custColorInp.innerText.length > 0) return;
 
@@ -415,6 +381,36 @@ app.sdk.onMeeting(async ({ action }) => {
     app.sdk.postMessage(payload);
 });
 
+app.sdk.onParticipantChange(async ({ participants }) => {
+    for (const part of participants) {
+        const p = {
+            screenName: part.screenName,
+            participantId: part.participantId.toString(),
+            role: part.role,
+        };
+
+        const predicate = ({ participantId }) =>
+            participantId === p.participantId;
+
+        const i = app.participants.indexOf(predicate);
+
+        if (part.status === 'leave' && i !== -1) {
+            app.participants.splice(i, 1);
+            const idx = settings.cast.findIndex(p.participantId);
+
+            if (idx === -1) return;
+            settings.cast.splice(idx, 1);
+
+            if (app.isImmersive()) await app.clearParticipant(p.participantId);
+        } else {
+            app.participants.push(p);
+        }
+    }
+
+    app.sdk.postMessage({ participants: app.participants });
+    setCastSelect(app.participants);
+});
+
 app.sdk.onMessage(async ({ payload }) => {
     const {
         addTopic,
@@ -495,7 +491,7 @@ app.sdk.onMessage(async ({ payload }) => {
     }
 });
 
-app.sdk.onParticipantChange(handleParticipantChange);
+startBtn.onclick = start;
 
 window.onresize = debounce(handleDraw, 1000);
 

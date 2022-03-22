@@ -1,12 +1,20 @@
 html, body {
     min-height: 100vh;
-    margin: 0 !important;
-    padding: 0 !important;
+    -ms-overflow-style: none; /* for Internet Explorer, Edge */
+    scrollbar-width: none; /* for Firefox */
+    overflow-y: scroll;
+}
+
+body::-webkit-scrollbar {
+    display: none; /* for Chrome, Safari, and Opera */
 }
 
 #logo {
     display: none;
 }
+
+
+
 
 #uiCanvas {
     position:fixed;
