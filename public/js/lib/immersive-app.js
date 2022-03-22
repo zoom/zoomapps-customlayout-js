@@ -69,6 +69,16 @@ class ImmersiveApp {
         return this.#drawnImages;
     }
 
+    get userIsHost() {
+        return this.user.role === 'host';
+    }
+
+    get host() {
+        return this.userIsHost
+            ? this.user
+            : this.participants.find((p) => p.role === 'host');
+    }
+
     get drawnParticipants() {
         return this.#drawnParticipants;
     }

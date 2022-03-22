@@ -46,15 +46,13 @@ const topicBtn = document.getElementById('topicBtn');
 const topicInp = document.getElementById('topicInp');
 const topicList = document.getElementById('topicList');
 
-function debounce(fn, ms = 250) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-            timer = null;
-            fn.apply(this, args);
-        }, ms);
-    };
+async function start() {
+    await app.start();
+    await app.updateContext();
+    showElements();
+
+    if (app.isImmersive() && app.userIsHost)
+        await app.sdk.sendAppInvitationToAllParticipants();
 }
 
 function showEl(el) {
@@ -69,6 +67,219 @@ function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+function debounce(fn, ms = 250) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            fn.apply(this, args);
+        }, ms);
+    };
+}
+
+async function handleDraw() {
+    if (app.isImmersive()) {
+        // use clientWidth to account for MSFT Windows
+        const width = document.body.clientWidth * devicePixelRatio;
+        const height = document.body.clientHeight * devicePixelRatio;
+
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.fillStyle = settings.color;
+
+        console.log(settings.cast);
+
+        const data = await draw({
+            ctx,
+            participants: settings.cast,
+            text: settings.text,
+        });
+
+        console.log(data);
+
+        await app.clearAllParticipants();
+        await app.clearAllImages();
+
+        for (let i = 0; i < data.length; i++) {
+            const { participant, img } = data[i];
+            const id = participant?.participantId;
+
+            await app.drawImage(img);
+            if (id) await app.drawParticipant(participant);
+        }
+
+        clearCanvas();
+    }
+}
+
+async function handleUpdate({ topic, participants, color }) {
+    const changes = {
+        topic: topic && settings.text !== topic,
+        color: color && settings.color !== color,
+        participants: participants && settings.cast !== participants,
+    };
+
+    const allChanged = Object.values(changes).reduce(
+        (sum, next) => sum && next,
+        true
+    );
+
+    if (changes.topic) settings.text = topic;
+
+    if (changes.color) {
+        settings.color = color;
+        await app.sdk.postMessage({ color: settings.color });
+    }
+
+    if (allChanged) {
+        settings.cast = participants;
+        return await handleDraw();
+    }
+
+    if (changes.participants) {
+        console.log('parts', participants);
+        const hasImages = app.drawnParticipants.length > 0;
+        const cast = [];
+        for (let i = 0; i < participants.length; i++) {
+            const p = participants[i];
+            if (!p) continue;
+
+            cast.push(p);
+
+            if (app.isImmersive() && hasImages && !changes.color)
+                console.log('redrawing', i, p);
+            await redrawParticipant(i, p);
+        }
+
+        settings.cast = cast;
+
+        if (app.isImmersive() && !hasImages) await handleDraw();
+    }
+
+    if (app.isImmersive()) {
+        if (changes.color && !changes.participants) {
+            return await handleDraw();
+        }
+
+        if (changes.topic) await redrawText();
+    }
+}
+
+async function redrawText() {
+    const idx = 3;
+
+    const { img } = await drawQuadrant({
+        idx,
+        ctx,
+        text: settings.text,
+    });
+
+    const oldId = app.drawnImages[idx];
+    await app.drawImage(img);
+
+    if (oldId) await app.clearImage(oldId);
+
+    clearCanvas();
+}
+
+async function redrawParticipant(idx, p) {
+    const { img, participant } = await drawQuadrant({
+        ctx,
+        idx,
+        participantId: p,
+    });
+
+    console.log(participant, img);
+
+    await app.drawImage(img);
+
+    if (participant?.participantId) {
+        const id = participant.participantId;
+        const drawn = app.drawnParticipants[idx];
+
+        console.log(drawn);
+        if (drawn) await app.clearParticipant(drawn);
+
+        if (id) await app.drawParticipant(participant);
+    }
+
+    clearCanvas();
+}
+
+function setCastSelect(participants) {
+    for (let i = 0; i < castSel.options.length; i++) castSel.remove(i);
+
+    for (const p of participants) {
+        const prefix = p.role === 'host' ? '[You] ' : '';
+        const opt = document.createElement('option');
+
+        opt.value = p.participantId;
+        opt.text = `${prefix}${p.screenName}`;
+
+        castSel.appendChild(opt);
+    }
+}
+
+function showElements() {
+    const { style } = document.body;
+
+    if (app.isImmersive()) {
+        style.backgroundColor = 'white';
+        style.overflow = 'hidden';
+        hideEl(content);
+    } else {
+        style.backgroundColor = settings.color;
+        showEl(content);
+    }
+
+    if (app.isInMeeting()) {
+        if (app.userIsHost) {
+            showEl(controls);
+            showEl(startBtn);
+            hideEl(helpMsg);
+        } else {
+            helpMsg.innerText = 'This app must be started by the host';
+        }
+    }
+
+    if (app.userIsHost) {
+        showEl(hostControls);
+        setCastSelect(app.participants);
+    }
+}
+
+function createTopic(text) {
+    const idx = topicList.children.length;
+    const a = document.createElement('a');
+    a.classList.add(classes.panel);
+
+    a.innerText = text;
+    a.onclick = async (e) => {
+        settings.text = e.target.innerText;
+
+        if (app.userIsHost)
+            socket.emit('sendUpdate', {
+                topic: settings.text,
+                meetingUUID: settings.uuid,
+            });
+
+        await app.sdk.postMessage({ setTopic: settings.text, topicIndex: idx });
+
+        const siblings = a.parentElement.querySelectorAll(`a.${classes.panel}`);
+
+        for (const tag of siblings)
+            if (tag !== e.target) tag.classList.remove(classes.bold);
+            else tag.classList.add(classes.bold);
+    };
+
+    topicList.appendChild(a);
+}
+
 async function handleParticipantChange({ participants }) {
     for (const part of participants) {
         const p = {
@@ -80,11 +291,11 @@ async function handleParticipantChange({ participants }) {
         const predicate = ({ participantId }) =>
             participantId === p.participantId;
 
-        const i = app.participants.findIndex(predicate);
+        const i = app.participants.indexOf(predicate);
 
         if (part.status === 'leave' && i !== -1) {
             app.participants.splice(i, 1);
-            const idx = settings.cast.findIndex(predicate);
+            const idx = settings.cast.findIndex(p.participantId);
 
             if (idx === -1) return;
             settings.cast.splice(idx, 1);
@@ -99,189 +310,7 @@ async function handleParticipantChange({ participants }) {
     setCastSelect(app.participants);
 }
 
-function setCastSelect(participants) {
-    const el = castSel;
-
-    for (let i = 0; i < el.children.length; i++) el.remove(i);
-
-    for (const p of participants) {
-        console.log(p);
-        if (p.role === 'host') continue;
-
-        const opt = document.createElement('option');
-
-        opt.value = p.participantId;
-        opt.text = p.screenName;
-
-        el.appendChild(opt);
-    }
-}
-
-async function handleDraw() {
-    if (app.isImmersive()) {
-        const width = document.body.clientWidth * devicePixelRatio;
-        const height = document.body.clientHeight * devicePixelRatio;
-
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx.fillStyle = settings.color;
-
-        console.log(settings.cast);
-
-        await app.clearAllParticipants();
-        await app.clearAllImages();
-
-        const data = await draw({
-            ctx,
-            participants: settings.cast,
-            text: settings.text,
-        });
-
-        for (let i = 0; i < data.length; i++) {
-            const { participant: p, img } = data[i];
-
-            await app.drawImage(img);
-            if (p?.participantId) await app.drawParticipant(p);
-        }
-
-        clearCanvas();
-    }
-}
-
-async function redrawText() {
-    const idx = 3;
-
-    const { img } = await drawQuadrant({
-        idx,
-        ctx,
-        text: settings.text,
-    });
-
-    const oldId = app.drawnImages[idx];
-    if (oldId) await app.clearImage(oldId);
-
-    await app.drawImage(img);
-
-    clearCanvas();
-}
-
-async function redrawParticipant(idx, p) {
-    const { img, participant } = await drawQuadrant({
-        ctx,
-        idx,
-        participant: p,
-    });
-
-    if (img?.imageData) await app.drawImage(img);
-
-    if (participant?.participantId) await app.drawParticipant(participant);
-
-    clearCanvas();
-}
-
-function showElements() {
-    const { style } = document.body;
-
-    if (app.isImmersive()) {
-        style.backgroundColor = 'white';
-        style.overflow = 'hidden';
-    } else {
-        style.backgroundColor = settings.color;
-        showEl(content);
-    }
-
-    if (app.isInMeeting()) {
-        showEl(controls);
-        showEl(startBtn);
-        hideEl(helpMsg);
-    }
-
-    if (app.user.role === 'host') {
-        showEl(hostControls);
-        setCastSelect(app.participants);
-    }
-}
-
-async function handleUpdate({ topic, participants, color }) {
-    console.log('server on', topic, participants, color);
-
-    const changes = {
-        topic: topic && settings.text !== topic,
-        color: color && settings.color !== color,
-        participants: participants && settings.cast !== participants,
-    };
-    if (changes.topic) settings.text = topic;
-
-    if (changes.color) settings.color = color;
-
-    if (changes.participants) {
-        for (let i = 0; i < 3 && i < participants.length; i++) {
-            const p = participants[i];
-
-            if (p) {
-                settings.cast[i] = p;
-                if (app.isImmersive()) await redrawParticipant(i, p);
-            }
-        }
-    }
-
-    if (app.isImmersive())
-        if (changes.color) await handleDraw();
-        else if (changes.topic) await redrawText();
-}
-
-function createTopic(text) {
-    const idx = topicList.children.length;
-    const a = document.createElement('a');
-    a.classList.add(classes.panel);
-
-    a.innerText = text;
-    a.onclick = async (e) => {
-        settings.text = e.target.innerText;
-
-        await app.sdk.postMessage({ setTopic: settings.text, topicIndex: idx });
-
-        const siblings = a.parentElement.querySelectorAll(`a.${classes.panel}`);
-
-        for (const tag of siblings)
-            if (tag !== e.target) tag.classList.remove(classes.bold);
-            else tag.classList.add(classes.bold);
-    };
-
-    topicList.appendChild(a);
-}
-
-startBtn.onclick = async () => {
-    await app.start();
-
-    hideEl(content);
-
-    document.body.style.backgroundColor = 'white';
-
-    await app.updateContext();
-
-    const isHost = app.user.role === 'host';
-
-    settings.cast[0] = isHost
-        ? app.user
-        : app.participants.find((p) => p.role === 'host');
-
-    const { meetingUUID } = await app.sdk.getMeetingUUID();
-    settings.uuid = meetingUUID;
-
-    socket.emit('sendUpdate', {
-        participants: settings.cast.map((p) => p.participantId),
-        topic: settings.text,
-        color: settings.color,
-        meetingUUID: settings.uuid,
-    });
-
-    if (app) await app.sdk.sendAppInvitationToAllParticipants();
-};
+startBtn.onclick = start;
 
 colorSel.onchange = async (e) => {
     if (custColorInp.innerText.length > 0) return;
@@ -293,8 +322,14 @@ colorSel.onchange = async (e) => {
     document.body.style.backgroundColor = color;
 
     await app.sdk.postMessage({
-        color: e.target.value,
+        color,
     });
+
+    if (app.userIsHost)
+        socket.emit('sendUpdate', {
+            color: settings.color,
+            meetingUUID: settings.uuid,
+        });
 };
 
 custColorInp.onchange = debounce(async (e) => {
@@ -306,16 +341,18 @@ custColorInp.onchange = debounce(async (e) => {
         colorSel.setAttribute('disabled', '');
 
         await app.sdk.postMessage({
-            custColor: settings.color,
+            color: settings.color,
         });
+
+        if (app.userIsHost)
+            socket.emit('sendUpdate', {
+                color: settings.color,
+                meetingUUID: settings.uuid,
+            });
     } else {
         colorSel.removeAttribute('disabled');
     }
 }, 1000);
-
-castSel.onchange = (e) => {
-    console.log('selected', e.target.value);
-};
 
 topicBtn.onclick = async () => {
     const topic = topicInp.value;
@@ -324,62 +361,56 @@ topicBtn.onclick = async () => {
 
     createTopic(topic);
 
-    const { meetingUUID } = await app.sdk.getMeetingUUID();
-    settings.uuid = meetingUUID;
-
-    socket.emit('client', {
-        topic,
-        meetingUUID: settings.uuid,
-    });
-
     await app.sdk.postMessage({ addTopic: topic });
 };
 
 setCastBtn.onclick = async () => {
     const selected = castSel.querySelectorAll('option:checked');
+    const len = app.drawnParticipants.length;
 
-    for (let i = 0; i < 1 && i < selected.length; i++) {
-        const opt = selected[i];
+    const cast = [];
 
-        const p = {
-            screenName: opt.text,
-            participantId: opt.value,
-        };
+    for (let i = 0; i < 2 && i < selected.length; i++) {
+        const id = selected[i].value;
 
-        settings.cast[i + 1] = p;
+        if (!id) continue;
 
-        if (app.isImmersive()) await redrawParticipant(i, p);
+        cast.push(id);
+
+        if (app.isImmersive() && len > 0) await redrawParticipant(i, id);
     }
 
-    if (!app.isImmersive()) startBtn.click();
+    settings.cast = cast;
+
+    if (app.isImmersive() && len === 0) await handleDraw();
+    else if (app.isInMeeting()) await start();
+    else if (app.isInClient())
+        await app.sdk.postMessage({ cast: settings.cast });
+
+    socket.emit('sendUpdate', {
+        participants: settings.cast,
+        topic: settings.text,
+        color: settings.color,
+        meetingUUID: settings.uuid,
+    });
 };
 
-app.sdk.onParticipantChange(handleParticipantChange);
-
 app.sdk.onConnect(async () => {
-    const idx = colorSel.selectedIndex;
     await app.sdk.postMessage({
         participants: app.participants,
-        color: colorSel.options[idx].text.toLowerCase(),
-        custColor: custColorInp.value,
-        isHost: app.user.role === 'host',
+        color: settings.color,
+        isHost: app.userIsHost,
         uuid: settings.uuid,
     });
 });
 
 app.sdk.onMeeting(async ({ action }) => {
     let payload;
-    if (action === 'started') {
-        const { meetingUUID } = await app.sdk.getMeetingUUID();
-        payload = {
-            uuid: meetingUUID,
-        };
-    }
-
     if (action === 'ended') {
         payload = {
             ended: true,
         };
+        socket.disconnect();
     }
     app.sdk.postMessage(payload);
 });
@@ -388,7 +419,7 @@ app.sdk.onMessage(async ({ payload }) => {
     const {
         addTopic,
         color,
-        custColor,
+        cast,
         ended,
         isHost,
         participants,
@@ -416,33 +447,44 @@ app.sdk.onMessage(async ({ payload }) => {
         setCastSelect(participants);
     }
 
-    if (custColor) {
-        colorSel.setAttribute('disabled', '');
-        settings.color = custColor;
-        custColorInp.value = custColor;
-    } else {
-        colorSel.removeAttribute('disabled');
+    if (cast) {
+        settings.cast = cast;
+
+        if (app.isImmersive()) await handleDraw();
+        else if (app.isInMeeting()) await start();
     }
 
     if (color) {
-        settings.color = colors[color];
-        colorSel.value = color;
-    }
+        const idx = Object.values(colors).indexOf(color);
+        const isCustom = idx === -1;
 
-    if (color || custColor)
+        settings.color = color;
+
+        if (isCustom) {
+            custColorInp.value = color;
+            colorSel.setAttribute('disabled', '');
+        } else {
+            colorSel.removeAttribute('disabled');
+            colorSel.value = Object.keys(colors)[idx];
+        }
+
         if (app.isImmersive()) debounce(handleDraw());
         else document.body.style.backgroundColor = settings.color;
+    }
 
     if (addTopic) createTopic(addTopic);
 
     if (setTopic) {
         settings.text = setTopic;
-        for (let i = 1; i < topicList.children.length; i++) {
-            if (i === topicIndex) continue;
-            topicList.children[i].classList.remove(classes.bold);
-        }
+        const topics = topicList.querySelectorAll('a');
 
-        topicList.children[topicIndex].classList.add(classes.bold);
+        for (let i = 0; i < topics.length; i++) {
+            const topic = topics[i];
+            if (i === topicIndex) {
+                topic.classList.add(classes.bold);
+            }
+            topic.classList.remove(classes.bold);
+        }
 
         if (app.isImmersive()) await redrawText();
 
@@ -453,21 +495,22 @@ app.sdk.onMessage(async ({ payload }) => {
     }
 });
 
+app.sdk.onParticipantChange(handleParticipantChange);
+
 window.onresize = debounce(handleDraw, 1000);
 
 try {
     await app.init();
 
     if (!app.isInClient()) {
+        const { meetingUUID } = await app.sdk.getMeetingUUID();
+        settings.uuid = meetingUUID;
+
         await app.sdk.connect();
 
-        if (app.user.role !== 'host') {
+        if (!app.userIsHost) {
             socket.on('update', handleUpdate);
-
-            const { meetingUUID } = await app.sdk.getMeetingUUID();
-            settings.uuid = meetingUUID;
-
-            if (meetingUUID) socket.emit('join', { meetingUUID });
+            socket.emit('join', { meetingUUID: settings.uuid });
         }
     }
 

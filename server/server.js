@@ -4,6 +4,7 @@ import debug from 'debug';
 import { appName } from '../config.js';
 
 const dbg = debug(`${appName}:http`);
+const dbgWS = debug(`${appName}:socket-io`);
 const rooms = new Map();
 
 /**
@@ -34,25 +35,24 @@ function startWS(server) {
             if (!room) {
                 room = meetingUUID;
                 socket.join(room);
-                dbg(`${socket.id} joined room ${room}`);
+                dbgWS(`${socket.id} joined room ${room}`);
             }
 
-            if (rooms.has(room)) {
-                const data = rooms.get(room);
-                dbg(`joined with data ${JSON.stringify(data)}`);
+            if (rooms.has(room))
                 io.to(socket.id).emit('update', rooms.get(room));
-            }
         });
 
         socket.on(
             'sendUpdate',
             ({ participants, topic, color, meetingUUID }) => {
-                dbg('update evt', participants, topic, color, meetingUUID);
-                if (!meetingUUID)
-                    socket.emit('error', {
-                        message: 'Meeting UUID cannot be blank',
+                if (!meetingUUID) {
+                    const message = 'Meeting UUID cannot be blank';
+                    dbgWS('error', message);
+                    return socket.emit('error', {
+                        message,
                         code: 400,
                     });
+                }
 
                 if (!room) {
                     room = meetingUUID;
@@ -76,27 +76,12 @@ function startWS(server) {
                 if (changes.color) data.color = color;
 
                 rooms.set(room, data);
-                dbg(`sending update from ${socket.id} to ${room}`, room, data);
+                dbgWS(
+                    `sending update from socket ${socket.id} to room ${room}`
+                );
                 socket.to(room).emit('update', data);
             }
         );
-    });
-
-    io.of('/').adapter.on('create-room', (room) => {
-        console.log(`Socket.IO: Room '${room}' was created`);
-    });
-
-    io.of('/').adapter.on('delete-room', (room) => {
-        dbg(`Deleting room ${room}`);
-        if (rooms.has(room)) rooms.delete(room);
-    });
-
-    io.of('/').adapter.on('join-room', (room) => {
-        console.log(`Socket.IO: socket has joined room '${room}'`);
-    });
-
-    io.of('/').adapter.on('leave-room', (room) => {
-        console.log(`Socket.IO: socket has left room '${room}'`);
     });
 }
 

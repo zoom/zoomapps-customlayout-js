@@ -124,7 +124,7 @@ export async function drawLogo(ctx, x, y, width, height) {
 }
 
 export async function drawQuadrant(options) {
-    const { idx, ctx, text = '', participant } = options;
+    const { idx, ctx, text = '', participantId } = options;
 
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
@@ -224,7 +224,7 @@ export async function drawQuadrant(options) {
 
     return {
         participant: {
-            participantId: participant?.participantId,
+            participantId: participantId,
             x: `${Math.floor(xPos / devicePixelRatio)}px`,
             y: `${Math.floor(yPos / devicePixelRatio)}px`,
             width: w,
@@ -246,13 +246,12 @@ export async function draw(options) {
     const data = [];
 
     for (let idx = 0; idx < 4; idx++) {
-        let participant;
-        if (participants[idx]) participant = participants[idx];
+        const participantId = participants[idx];
 
         const d = await drawQuadrant({
             ctx,
             idx,
-            participant,
+            participantId,
             text,
             fill,
         });
