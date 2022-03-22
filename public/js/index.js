@@ -364,7 +364,7 @@ app.sdk.onConnect(async () => {
     });
 });
 
-app.sdk.onMeeting(async ({ action }) => {
+app.sdk.onMeeting(({ action }) => {
     let payload;
     if (action === 'ended') {
         payload = {
