@@ -1,6 +1,6 @@
 {
-  "name": "hello-zoom-apps",
-  "version": "0.0.0",
+  "name": "immersive-za-sample",
+  "version": "0.0.1",
   "type": "module",
   "exports": "./server",
   "private": true,
