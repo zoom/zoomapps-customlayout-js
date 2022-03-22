@@ -92,8 +92,6 @@ async function handleDraw() {
 
         ctx.fillStyle = settings.color;
 
-        console.log(settings.cast);
-
         // I clear the screen before drawing to avoid visual glitches on fast machines
         await app.clearAllParticipants();
         await app.clearAllImages();
@@ -141,7 +139,6 @@ async function handleUpdate({ topic, participants, color }) {
     }
 
     if (changes.participants) {
-        console.log('parts', participants);
         const hasImages = app.drawnParticipants.length > 0;
         const cast = [];
         for (let i = 0; i < participants.length; i++) {
@@ -192,15 +189,12 @@ async function redrawParticipant(idx, p) {
         participantId: p,
     });
 
-    console.log(participant, img);
-
     await app.drawImage(img);
 
     if (participant?.participantId) {
         const id = participant.participantId;
         const drawn = app.drawnParticipants[idx];
 
-        console.log(drawn);
         if (drawn) await app.clearParticipant(drawn);
 
         if (id) await app.drawParticipant(participant);
