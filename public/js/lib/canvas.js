@@ -1,12 +1,26 @@
+/**
+ * Loads an image from a given URL using a promise
+ * @param {String} src - URL to load an image From
+ * @return {Promise<unknown>}
+ */
 function loadImage(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.addEventListener('load', () => resolve(img));
-        img.addEventListener('error', (e) => reject(e));
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
         img.src = src;
     });
 }
 
+/**
+ * Draw a rectangle on a given HTMLCanvas context
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {Number} width - width of the rectangle
+ * @param {Number} height - height of the rectangle
+ * @param {string | CanvasGradient | CanvasPattern} fill - fillStyle for the rectangle
+ */
 export function drawRect(ctx, x, y, width, height, fill) {
     ctx.save();
     ctx.fillStyle = fill;
@@ -14,6 +28,15 @@ export function drawRect(ctx, x, y, width, height, fill) {
     ctx.restore();
 }
 
+/**
+ * Get the path for a rounded rectangle
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {Number} width - width of the rounded rectangle
+ * @param {Number} height - height of the rounded rectangle
+ * @param {Number} radius - radius of the rounded corners
+ * @return {Path2D}
+ */
 export function getRoundRectPath(x, y, width, height, radius) {
     const region = new Path2D();
 
@@ -32,23 +55,42 @@ export function getRoundRectPath(x, y, width, height, radius) {
     return region;
 }
 
-export function clipRoundRect(ctx, x, y, width, height, rad) {
+/**
+ * Clip a transparent rounded rectangle from a context
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {Number} width - width of the rounded rectangle
+ * @param {Number} height - height of the rounded rectangle
+ * @param {Number} radius - radius of the rounded corners
+ */
+export function clipRoundRect(ctx, x, y, width, height, radius) {
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = '#FFF';
-    ctx.lineWidth = 0;
 
-    const region = getRoundRectPath(x, y, width, height, rad);
+    const region = getRoundRectPath(x, y, width, height, radius);
 
-    ctx.fill(region, 'evenodd');
+    ctx.fill(region);
     ctx.clip(region);
     ctx.restore();
 }
 
-export function drawRoundRect(ctx, x, y, width, height, rad, fill, stroke) {
+/**
+ *
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {Number} width - width of the rounded rectangle
+ * @param {Number} height - height of the rounded rectangle
+ * @param {Number} radius - radius of the corners
+ * @param {string | CanvasGradient | CanvasPattern} [fill] - fillStyle for the rectangle
+ * @param {string | CanvasGradient | CanvasPattern} [stroke] - strokeStyle for the rectangle
+ */
+export function drawRoundRect(ctx, x, y, width, height, radius, fill, stroke) {
     ctx.save();
 
-    const region = getRoundRectPath(x, y, width, height, rad);
+    const region = getRoundRectPath(x, y, width, height, radius);
 
     if (stroke) {
         ctx.strokeStyle = stroke;
@@ -63,20 +105,31 @@ export function drawRoundRect(ctx, x, y, width, height, rad, fill, stroke) {
     ctx.restore();
 }
 
-export function drawText(options) {
-    const {
-        ctx,
-        text,
-        x,
-        y,
-        maxWidth = 512,
-        padding = 0,
-        size = 50,
-        font = 'sans-serif',
-        fill = 'black',
-        align = 'center',
-    } = options;
-
+/**
+ * Draw text and account for text-wrapping and text size
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {string} text - text to draw
+ * @param {Number} [maxWidth=512] - maximum width of the text
+ * @param {Number} [padding=0] - padding subtracted from max width
+ * @param {Number} [size=50] - font size
+ * @param {string} [font='sans-serif'] - type font
+ * @param {string | CanvasGradient | CanvasPattern} [fill='black'] - fillStlye of the text
+ * @param {string} [align='center'] - text alignment
+ */
+export function drawText({
+    ctx,
+    text,
+    x,
+    y,
+    maxWidth = 512,
+    padding = 0,
+    size = 50,
+    font = 'sans-serif',
+    fill = 'black',
+    align = 'center',
+}) {
     const ratio = size / 1000;
     const max = maxWidth - padding;
     const lineHeight = max * ratio;
@@ -110,6 +163,15 @@ export function drawText(options) {
     ctx.restore();
 }
 
+/**
+ * Draw the Zoom Logo on a context
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {Number} x - x coordinate
+ * @param {Number} y - y coordinate
+ * @param {Number} width - width of the image
+ * @param {Number} height - height of the image
+ * @return {Promise<void>}
+ */
 export async function drawLogo(ctx, x, y, width, height) {
     const logo = await loadImage('/img/zoom.png');
 
@@ -123,9 +185,15 @@ export async function drawLogo(ctx, x, y, width, height) {
     ctx.drawImage(logo, x, y, w, h);
 }
 
-export async function drawQuadrant(options) {
-    const { idx, ctx, text = '', participantId } = options;
-
+/**
+ * Draw quadrants of the screen and return information for drawing to Zoom
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {string} idx - index of the quadrant to draw (0-3)
+ * @param {string} text - text to draw (only used if idx=3)
+ * @param {string} participantId - participant to draw at the index (not used if idx=3)
+ * @return {Promise<Object>} - data to draw to Zoom
+ */
+export async function drawQuadrant({ idx, ctx, text, participantId }) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
 
@@ -157,10 +225,10 @@ export async function drawQuadrant(options) {
     const radius = Math.min(qw, h) * 0.3;
 
     let xPad = Math.floor(
-        Math.max(quadrant.width - (w + padding), padding * 2)
+        Math.max(quadrant.width - (w + padding), doublePadding)
     );
     let yPad = Math.floor(
-        Math.max(quadrant.height - (h + padding), padding * 2)
+        Math.max(quadrant.height - (h + padding), doublePadding)
     );
 
     switch (idx) {
@@ -240,9 +308,15 @@ export async function drawQuadrant(options) {
     };
 }
 
-export async function draw(options) {
-    const { ctx, participants, fill, text = '' } = options;
-
+/**
+ * Draw 4 quadrants filling the entire screen and rety
+ * @param {CanvasRenderingContext2D} ctx - canvas 2d context
+ * @param {Array.<String>} participants - participants IDs to map to quadrants
+ * @param {String} [fill] - fill Style to use
+ * @param {String} text - text to draw for the last quadrant
+ * @return {Promise<*[Object]>} - data for drawing to Zoom
+ */
+export async function draw({ ctx, participants, fill, text }) {
     const data = [];
 
     for (let idx = 0; idx < 4; idx++) {

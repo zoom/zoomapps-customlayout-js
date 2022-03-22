@@ -1,5 +1,8 @@
 /* global zoomSdk */
 
+/**
+ * Encapsulates the Zoom App JS SDK to create an Immersive App
+ */
 class ImmersiveApp {
     static #instance;
     #sdk = zoomSdk;
@@ -127,7 +130,7 @@ class ImmersiveApp {
         if (this.isInMeeting()) {
             this.user = await this.sdk.getUserContext();
 
-            if (this.user.role === 'host') {
+            if (this.userIsHost) {
                 const { participants } =
                     await this.sdk.getMeetingParticipants();
                 this.#participants = participants;
@@ -139,7 +142,7 @@ class ImmersiveApp {
 
     async start() {
         // check that we're running as the host
-        if (this.user.role !== 'host') return;
+        if (!this.userIsHost) return;
 
         // check that we're in a meeting
         if (!this.isInMeeting()) return;
