@@ -1,8 +1,5 @@
 /* global zoomSdk */
 
-/**
- * Encapsulates the Zoom App JS SDK to create an Immersive App
- */
 class ImmersiveApp {
     static #instance;
     #sdk = zoomSdk;

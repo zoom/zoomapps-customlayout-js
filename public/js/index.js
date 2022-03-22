@@ -113,38 +113,38 @@ function debounce(fn, ms = 250) {
  * @return {Promise<void>}
  */
 async function handleDraw() {
-    if (app.isImmersive()) {
-        const width = innerWidth * devicePixelRatio;
-        const height = innerHeight * devicePixelRatio;
+    if (!app.isImmersive()) return;
 
-        canvas.width = width;
-        canvas.height = height;
+    const width = innerWidth * devicePixelRatio;
+    const height = innerHeight * devicePixelRatio;
 
-        ctx.fillStyle = settings.color;
+    canvas.width = width;
+    canvas.height = height;
 
-        // we clear screen before drawing to avoid visual glitches on fast machines
-        await app.clearAllParticipants();
-        await app.clearAllImages();
+    ctx.fillStyle = settings.color;
 
-        // we draw to the page canvas so the user sees the change right away
-        const data = await draw({
-            ctx,
-            participants: settings.cast,
-            text: settings.topic,
-        });
+    // we clear screen before drawing to avoid visual glitches on fast machines
+    await app.clearAllParticipants();
+    await app.clearAllImages();
 
-        // then we save our quadrants to Zoom at the correct zIndexes
-        for (let i = 0; i < data.length; i++) {
-            const { participant, img } = data[i];
-            const id = participant?.participantId;
+    // we draw to the page canvas so the user sees the change right away
+    const data = await draw({
+        ctx,
+        participants: settings.cast,
+        text: settings.topic,
+    });
 
-            await app.drawImage(img);
-            if (id) await app.drawParticipant(participant);
-        }
+    // then we save our quadrants to Zoom at the correct zIndexes
+    for (let i = 0; i < data.length; i++) {
+        const { participant, img } = data[i];
+        const id = participant?.participantId;
 
-        // Clear the page canvas that we drew over with Zoom
-        clearCanvas();
+        await app.drawImage(img);
+        if (id) await app.drawParticipant(participant);
     }
+
+    // Clear the page canvas that we drew over with Zoom
+    clearCanvas();
 }
 
 /**
@@ -596,7 +596,7 @@ setCastBtn.onclick = async () => {
 window.onresize = debounce(handleDraw, 1000);
 
 try {
-    // Initialize the Zoom JS SDK encapsulated in the ImmersiveApp class
+    // Initialize the Zoom JS SDK
     await app.init();
 
     if (!app.isInClient()) {
