@@ -152,6 +152,8 @@ async function handleDraw() {
  * @return {Promise<void>}
  */
 async function redrawText() {
+    if (!app.isImmersive()) return;
+
     // text is always at index 3
     const idx = 3;
 
@@ -181,6 +183,8 @@ async function redrawText() {
  * @return {Promise<void>}
  */
 async function redrawParticipant(idx, p) {
+    if (!app.isImmersive()) return;
+
     const { img, participant } = await drawQuadrant({
         ctx,
         idx,
