@@ -189,11 +189,15 @@ export async function drawLogo(ctx, x, y, width, height) {
  * Draw quadrants of the screen and return information for drawing to Zoom
  * @param {CanvasRenderingContext2D} ctx - canvas 2d context
  * @param {Number} idx - index of the quadrant to draw (0-3)
- * @param {string} text - text to draw (only used if idx=3)
- * @param {string} participantId - participant to draw at the index (not used if idx=3)
+ * @param {string} [text] - text to draw (only used if idx=3)
+ * @param {string} [participantId] - participant to draw at the index (not used if idx=3)
  * @return {Promise<Object>} - data to draw to Zoom
  */
 export async function drawQuadrant({ idx, ctx, text, participantId }) {
+    if (idx < 0 || idx > 3) throw new Error('idx is outsize of range (0-3)');
+
+    ctx.save();
+
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
 
@@ -237,8 +241,8 @@ export async function drawQuadrant({ idx, ctx, text, participantId }) {
             xPad = padding;
             break;
         case 2:
-            yPad = padding;
             y = center.y;
+            yPad = padding;
             break;
         case 3:
             xPad = padding;
@@ -255,9 +259,7 @@ export async function drawQuadrant({ idx, ctx, text, participantId }) {
 
     clipRoundRect(ctx, xPos, yPos, w, h, radius);
 
-    let imageData;
-    const isText = idx === 3 && text;
-    if (isText) {
+    if (idx === 3 && text) {
         // Draw a rectangle behind our logo
         const rw = Math.max(w, h) / 2;
         const rh = Math.max(w, h) / 7;
@@ -288,7 +290,9 @@ export async function drawQuadrant({ idx, ctx, text, participantId }) {
         await drawLogo(ctx, rx, ry, rw, rh);
     }
 
-    imageData = ctx.getImageData(x, y, quadrant.width, quadrant.height);
+    const imageData = ctx.getImageData(x, y, quadrant.width, quadrant.height);
+
+    ctx.restore();
 
     return {
         participant: {

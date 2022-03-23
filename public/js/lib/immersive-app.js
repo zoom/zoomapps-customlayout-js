@@ -73,12 +73,6 @@ class ImmersiveApp {
         return this.user.role === 'host';
     }
 
-    get host() {
-        return this.userIsHost
-            ? this.user
-            : this.participants.find((p) => p.role === 'host');
-    }
-
     get drawnParticipants() {
         return this.#drawnParticipants;
     }
@@ -130,7 +124,14 @@ class ImmersiveApp {
             if (this.userIsHost) {
                 const { participants } =
                     await this.sdk.getMeetingParticipants();
-                this.#participants = participants;
+
+                // set the host first in the array
+                this.#participants = [
+                    this.user,
+                    ...participants.filter(
+                        (p) => p.participantId !== this.user.participantId
+                    ),
+                ];
             }
         }
 
