@@ -339,7 +339,7 @@ function createTopic(text) {
  * @param {String} text - topic text
  * @param {Number} idx - index of the topic in the topicList
  */
-function setTopic(text, idx) {
+function setTopic(idx, text) {
     const topics = topicList.querySelectorAll('a');
 
     for (let i = 0; i < topics.length; i++) {
@@ -501,7 +501,7 @@ app.sdk.onMessage(async ({ payload }) => {
 
     // set the default topic
     if (activeTopic) {
-        setTopic(activeTopic, topicIndex);
+        setTopic(topicIndex, activeTopic);
         if (app.isImmersive()) await redrawText();
     }
 });

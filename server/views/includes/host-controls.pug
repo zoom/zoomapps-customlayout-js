@@ -1,10 +1,10 @@
 .is-hidden#hostControls
     .columns
-        .column.is-two-fifths
+        .column
             label.label(for='topicInp') Add Topics
             .field.has-addons
-                .control
-                    input.input.is-fullwidth#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
+                .control.is-expanded
+                    input.input#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
                 .control
                     a.button#topicBtn
                         | Add
@@ -13,12 +13,12 @@
                     article.panel.has-background-white#topicList
                         p.panel-heading
                             | Topics
-        .column.is-two-fifths
+        .column
             .field
                 label.label(for='castSel') Select up to 3 Participants:&nbsp
                 .control
                     .select.is-multiple.is-fullwidth
-                        select#castSel(size='10' name='castSel' multiple)
+                        select#castSel(multiple size='10' name='castSel' )
             .columns
                 .column
                     .control
