@@ -116,7 +116,7 @@ export function drawRoundRect(ctx, x, y, width, height, radius, fill, stroke) {
  * @param {Number} [size=50] - font size
  * @param {string} [font='sans-serif'] - type font
  * @param {string | CanvasGradient | CanvasPattern} [fill='black'] - fillStlye of the text
- * @param {string} [align='center'] - text alignment
+ * @param {CanvasTextAlign} [align='center'] - text alignment
  */
 export function drawText({
     ctx,
