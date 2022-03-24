@@ -1,50 +1,19 @@
 extends layout
+include mixins/prompt-install
 
 block content
-    h1.title.has-text-centered Immersive Zoom App Sample
-    h2.subtitle.has-text-centered#helpMsg Open this app in a Meeting to use it
-    .is-hidden#controls
-        .columns
-            .column.is-two-fifths
-                .field
-                    label.label(for='colorSel') Choose a Color:&nbsp
-                    .control
-                        .select
-                            select#colorSel(name='colors')
-                                option(value='black') Black
-                                option(value='blue' selected) Blue
-                                option(value='green') Green
-                                option(value='grey') Grey
-                                option(value='red') Red
-                                option(value='white') White
-                                option(value='yellow') Yellow
-            .column.is-two-fifths
-                .field
-                    label.label(for='custColorInp') Custom Color:&nbsp
-                    .control
-                        input.input#custColorInp(type='text' name='custColorInp' placeholder='HTML Canvas Fill Style')
-    .is-hidden#hostControls
-        .columns
-            .column.is-two-fifths
-                label.label(for='topicInp') Add Topics
-                .field.has-addons
-                    .control
-                        input.input.is-fullwidth#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
-                    .control
-                        a.button#topicBtn
-                            | Add
-                .columns
-                    .column
-                        article.panel.has-background-white#topicList
-                            p.panel-heading
-                                | Topics
-            .column.is-two-fifths
-                .field
-                    label.label(for='castSel') Select up to 3 Participants:&nbsp
-                    .control
-                        .select.is-multiple.is-fullwidth
-                            select#castSel(size='10' name='castSel' multiple)
-                .columns
-                    .column
-                        .control
-                            button.button.is-fullwidth#setCastBtn Show Participants
+    if (isZoom)
+        .is-hidden#main
+            h1.title.has-text-centered Immersive Zoom App Sample
+            h2.subtitle.has-text-centered#helpMsg Open this app in a Meeting to use it
+            include includes/controls
+            include includes/host-controls
+        canvas#uiCanvas
+        img#logo(src='/img/zoom.png')
+    else
+        +prompt-install(installURL)
+
+append scripts
+    if (isZoom)
+        script(src='/socket.io/socket.io.js')
+        script(src='/js/index.js' type='module')

@@ -1,3 +1,5 @@
+@import 'vendor/bulma.min.css';
+
 html, body {
     min-height: 100vh;
     -ms-overflow-style: none;

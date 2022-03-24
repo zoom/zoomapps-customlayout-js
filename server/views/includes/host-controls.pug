@@ -1,0 +1,25 @@
+.is-hidden#hostControls
+    .columns
+        .column.is-two-fifths
+            label.label(for='topicInp') Add Topics
+            .field.has-addons
+                .control
+                    input.input.is-fullwidth#topicInp(type='text' name='topicInp' placeholder='Add a Topic')
+                .control
+                    a.button#topicBtn
+                        | Add
+            .columns
+                .column
+                    article.panel.has-background-white#topicList
+                        p.panel-heading
+                            | Topics
+        .column.is-two-fifths
+            .field
+                label.label(for='castSel') Select up to 3 Participants:&nbsp
+                .control
+                    .select.is-multiple.is-fullwidth
+                        select#castSel(size='10' name='castSel' multiple)
+            .columns
+                .column
+                    .control
+                        button.button.is-fullwidth#setCastBtn Show Participants
