@@ -58,7 +58,7 @@ function showEl(el) {
 }
 
 /**
- * Add the hiddent class to an element
+ * Add the hidden class to an element
  * @param {Element} el - element to show
  */
 function hideEl(el) {
