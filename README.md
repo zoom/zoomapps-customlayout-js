@@ -53,7 +53,24 @@ Select the following OAuth scopes from the Scopes tab:
 
 Choose these features from the Zoom JS SDK section of the Features tab:
 
-- shareApp
+- clearImage,
+- clearParticipant,
+- closeRenderingContext
+- connect
+- rawImage
+- drawParticipant
+- getMeetingParticipants
+- getMeetingUUID
+- getRunningContext
+- getUserContext
+- onConnect
+- onMeeting
+- onMessage
+- onMyMediaChange
+- onParticipantChange
+- postMessage
+- runRenderingContext
+- sendAppInvitationToAllParticipants
 
 ## Installation
 
@@ -127,16 +144,6 @@ To start the app run the container that was built:
 docker run -p 80:80 zoom-app
 ````
 
-## Serve over HTTPS
-
-In order to use the Zoom App within Zoom you'll want to make sure that you're serving over HTTPS and your app is
-publicly accessible. Often the easiest way to accomplish this is to use a tool like [Ngrok](https://ngrok.com) with the
-port you're serving on:
-
-```shell
-ngrok http 3000
-```
-
 ## Usage
 
 Install the Zoom App for your user:
@@ -144,6 +151,7 @@ Install the Zoom App for your user:
 1. Navigate to your application on the [Zoom Marketplace](https://marketplace.zoom.us) and Click **Install**
 2. or open your Zoom App in a browser (localhost:3000 by default) and click the install link
 3. or navigate to `/install` in your browser
+
 
 ## Deployment
 
