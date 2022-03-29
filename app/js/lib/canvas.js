@@ -1,18 +1,4 @@
 /**
- * Loads an image from a given URL using a promise
- * @param {String} src - URL to load an image From
- * @return {Promise<unknown>}
- */
-function loadImage(src) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = (e) => reject(e);
-        img.src = src;
-    });
-}
-
-/**
  * Draw a rectangle on a given HTMLCanvas context
  * @param {CanvasRenderingContext2D} ctx - canvas 2d context
  * @param {Number} x - x coordinate
@@ -164,6 +150,20 @@ export function drawText({
 }
 
 /**
+ * Loads an image from a given URL using a promise
+ * @param {String} src - URL to load an image From
+ * @return {Promise<unknown>}
+ */
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = src;
+    });
+}
+
+/**
  * Draw the Zoom Logo on a context
  * @param {CanvasRenderingContext2D} ctx - canvas 2d context
  * @param {Number} x - x coordinate
@@ -195,8 +195,6 @@ export async function drawLogo(ctx, x, y, width, height) {
  */
 export async function drawQuadrant({ idx, ctx, text, participantId }) {
     if (idx < 0 || idx > 3) throw new Error('idx is outsize of range (0-3)');
-
-    ctx.save();
 
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
@@ -259,30 +257,31 @@ export async function drawQuadrant({ idx, ctx, text, participantId }) {
 
     clipRoundRect(ctx, xPos, yPos, w, h, radius);
 
-    if (idx === 3 && text) {
+    if (idx === 3) {
         // Draw a rectangle behind our logo
         const rw = Math.max(w, h) / 2;
         const rh = Math.max(w, h) / 7;
-
-        // Draw Text
-        const wordPad = Math.floor((h - rh) / 2);
-        const size = 64;
-
-        drawText({
-            ctx,
-            text,
-            size,
-            x: x + Math.floor(w / 2) + xPad,
-            y: y + Math.floor(yPad / 2) + wordPad,
-            padding: wordPad,
-            maxWidth: w,
-            font: 'Arial Black',
-        });
 
         const rx = x + (qw - rw);
 
         const distToBottom = quadrant.height - h;
         const ry = y + (quadrant.height - distToBottom - Math.floor(rh / 2));
+
+        if (text) {
+            const wordPad = Math.floor((h - rh) / 2);
+            const size = 64;
+
+            drawText({
+                ctx,
+                text,
+                size,
+                x: x + Math.floor(w / 2) + xPad,
+                y: y + Math.floor(yPad / 2) + wordPad,
+                padding: wordPad,
+                maxWidth: w,
+                font: 'Arial Black',
+            });
+        }
 
         drawRoundRect(ctx, rx, ry, rw, rh, radius, fill);
 
@@ -291,8 +290,6 @@ export async function drawQuadrant({ idx, ctx, text, participantId }) {
     }
 
     const imageData = ctx.getImageData(x, y, quadrant.width, quadrant.height);
-
-    ctx.restore();
 
     return {
         participant: {

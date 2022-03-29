@@ -1,7 +1,7 @@
 {
   "env": {
     "browser": true,
-    "es2022": true,
+    "es2021": true,
     "node": true
   },
   "extends": [
@@ -16,15 +16,7 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "ignorePatterns": ["public/js/vendor/*.js"],
-  "settings": {
-    "import/resolver": {
-      "node": {
-        "extensions": [".js"],
-        "moduleDirectory": ["node_modules", "/js/lib"]
-      }
-    }
-  },
+  "ignorePatterns": ["app/js/vendor/*.js"],
   "rules": {
     "import/extensions": [
       "error",
