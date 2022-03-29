@@ -16,7 +16,7 @@ const settings = {
     cast: [],
     color: colors.blue,
     topic: 'Hey there 👋 You can create and select your own topic from the home page',
-    uuid: null,
+    uuid: '',
 };
 
 const classes = {
@@ -50,22 +50,6 @@ const topicInp = document.getElementById('topicInp');
 const topicList = document.getElementById('topicList');
 
 /**
- * Start the Immersive Context and send an invitation to all users
- * @return {Promise<void>}
- */
-async function start() {
-    hideEl(content);
-
-    await app.start();
-    await app.updateContext();
-
-    showElements();
-
-    if (app.isImmersive() && app.userIsHost)
-        await app.sdk.sendAppInvitationToAllParticipants();
-}
-
-/**
  * Remove the hidden class from an element
  * @param {Element} el - element to hide
  */
@@ -79,6 +63,22 @@ function showEl(el) {
  */
 function hideEl(el) {
     el.classList.add(classes.hidden);
+}
+
+/**
+ * Start the Immersive Context and send an invitation to all users
+ * @return {Promise<void>}
+ */
+async function start() {
+    hideEl(content);
+
+    await app.start();
+    await app.updateContext();
+
+    showElements();
+
+    if (app.isImmersive() && app.userIsHost)
+        await app.sdk.sendAppInvitationToAllParticipants();
 }
 
 /**
