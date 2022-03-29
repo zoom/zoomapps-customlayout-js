@@ -6,24 +6,11 @@
   },
   "extends": [
     "eslint:recommended",
-    "plugin:import/recommended",
     "prettier"
-  ],
-  "plugins": [
-    "html"
   ],
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "ignorePatterns": ["app/js/vendor/*.js"],
-  "rules": {
-    "import/extensions": [
-      "error",
-      "ignorePackages",
-      {
-        "js": "always"
-      }
-    ]
-  }
+  "ignorePatterns": ["app/js/vendor/*.js"]
 }
