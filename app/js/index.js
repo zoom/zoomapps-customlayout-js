@@ -66,22 +66,6 @@ function hideEl(el) {
 }
 
 /**
- * Start the Immersive Context and send an invitation to all users
- * @return {Promise<void>}
- */
-async function start() {
-    hideEl(content);
-
-    await app.start();
-    await app.updateContext();
-
-    showElements();
-
-    if (app.isImmersive() && app.userIsHost)
-        await app.sdk.sendAppInvitationToAllParticipants();
-}
-
-/**
  * Clear the in-page canvas for re-drawing
  */
 function clearCanvas() {
@@ -106,11 +90,27 @@ function debounce(fn, ms = 250) {
 }
 
 /**
+ * Start the Immersive Context and send an invitation to all users
+ * @return {Promise<void>}
+ */
+async function start() {
+    hideEl(content);
+
+    await app.start();
+    await app.updateContext();
+
+    showElements();
+
+    if (app.isImmersive && app.userIsHost)
+        await app.sdk.sendAppInvitationToAllParticipants();
+}
+
+/**
  * Draw the entire screen - to be used with debounce()
  * @return {Promise<void>}
  */
-async function handleDraw() {
-    if (!app.isImmersive()) return;
+async function render() {
+    if (!app.isImmersive) return;
 
     const width = innerWidth * devicePixelRatio;
     const height = innerHeight * devicePixelRatio;
@@ -151,8 +151,8 @@ async function handleDraw() {
  * Redraw the text index only
  * @return {Promise<void>}
  */
-async function redrawText() {
-    if (!app.isImmersive()) return;
+async function drawTopic() {
+    if (!app.isImmersive) return;
 
     // text is always at index 3
     const idx = 3;
@@ -180,8 +180,8 @@ async function redrawText() {
  * @param {String} p - participant ID
  * @return {Promise<void>}
  */
-async function redrawParticipant(idx, p) {
-    if (!app.isImmersive() || idx >= 3) return;
+async function drawCastMember(idx, p) {
+    if (!app.isImmersive || idx >= 3) return;
 
     const { img, participant } = await drawQuadrant({
         ctx,
@@ -210,13 +210,12 @@ async function redrawParticipant(idx, p) {
  * @param {String} color - UI color
  * @return {Promise<void>}
  */
-async function handleUpdate({ topic, participants, color }) {
+async function onUpdate({ topic, participants, color }) {
     const changes = {
         topic: topic && settings.topic !== topic,
         color: color && settings.color !== color,
         participants: participants && settings.cast !== participants,
     };
-    console.log(changes);
 
     if (changes.topic) settings.topic = topic;
 
@@ -229,7 +228,7 @@ async function handleUpdate({ topic, participants, color }) {
 
     if (changes.participants) settings.cast = participants;
 
-    if (!app.isImmersive()) return;
+    if (!app.isImmersive) return;
 
     const allChanged = Object.values(changes).reduce(
         (sum, next) => sum && next,
@@ -240,13 +239,13 @@ async function handleUpdate({ topic, participants, color }) {
     const hasImages = len > 0;
 
     if (allChanged || changes.color || (changes.participants && !hasImages))
-        return await handleDraw();
+        return await render();
 
-    if (changes.topic) await redrawText();
+    if (changes.topic) await drawTopic();
 
     if (changes.participants && hasImages)
         for (let i = 0; i < len; i++) {
-            await redrawParticipant(i, settings.cast[i]);
+            await drawCastMember(i, settings.cast[i]);
         }
 }
 
@@ -274,7 +273,7 @@ function setCastSelect(participants) {
 function showElements() {
     const { style } = document.body;
 
-    if (app.isImmersive()) {
+    if (app.isImmersive) {
         style.backgroundColor = 'white';
         style.overflow = 'hidden';
         hideEl(content);
@@ -283,7 +282,7 @@ function showElements() {
         showEl(content);
     }
 
-    if (app.isInMeeting()) {
+    if (app.isInMeeting) {
         if (app.userIsHost) {
             showEl(controls);
             hideEl(helpMsg);
@@ -345,10 +344,6 @@ function setTopic(idx, text) {
     for (let i = 0; i < topics.length; i++) {
         const topic = topics[i];
 
-        console.log(topic);
-        console.log(i);
-        console.log(idx);
-
         if (i === idx) {
             topic.classList.add(classes.bold);
             continue;
@@ -369,51 +364,42 @@ function setTopic(idx, text) {
 /*  Zoom Event Handlers */
 
 app.sdk.onConnect(async () => {
-    if (!app.isInClient()) {
-        await app.sdk.postMessage({
-            participants: app.participants,
-            color: settings.color,
-            isHost: app.userIsHost,
-            uuid: settings.uuid,
-        });
-    }
+    if (app.isInClient) return;
+
+    await app.sdk.postMessage({
+        participants: app.participants,
+        color: settings.color,
+        isHost: app.userIsHost,
+        uuid: settings.uuid,
+    });
 });
 
 app.sdk.onMeeting(({ action }) => {
-    let payload;
-    if (action === 'ended') {
-        payload = {
-            ended: true,
-        };
-        socket.disconnect();
-    }
-    app.sdk.postMessage(payload);
+    if (action === 'ended') socket.disconnect();
 });
 
 app.sdk.onParticipantChange(async ({ participants }) => {
     for (const part of participants) {
         const p = {
-            screenName: part.screenName,
             participantId: part.participantId.toString(),
+            screenName: part.screenName,
             role: part.role,
         };
 
-        const predicate = ({ participantId }) =>
-            participantId === p.participantId;
-
-        const i = app.participants.indexOf(predicate);
+        const i = app.participants.findIndex(
+            ({ participantId }) => participantId === p.participantId
+        );
 
         if (part.status === 'leave' && i !== -1) {
             app.participants.splice(i, 1);
-            const idx = settings.cast.findIndex(p.participantId);
+            const idx = settings.cast.indexOf(p.participantId);
 
             if (idx === -1) return;
+
             settings.cast.splice(idx, 1);
 
-            if (app.isImmersive()) await app.clearParticipant(p.participantId);
-        } else {
-            app.participants.push(p);
-        }
+            if (app.isImmersive) await app.clearParticipant(p.participantId);
+        } else app.participants.push(p);
     }
 
     app.sdk.postMessage({ participants: app.participants });
@@ -441,7 +427,6 @@ app.sdk.onMessage(async ({ payload }) => {
 
     // hide controls when the meeting ends
     if (ended) {
-        console.log('ended');
         hideEl(controls);
         hideEl(hostControls);
     }
@@ -463,18 +448,18 @@ app.sdk.onMessage(async ({ payload }) => {
     if (updateCast) {
         settings.cast = updateCast.slice(0, 3);
 
-        if (app.isImmersive()) {
+        if (app.isInMeeting) await start();
+        else if (app.isImmersive) {
             const len = app.drawnImages.length;
-            const hasImages = len > 0;
-            if (hasImages)
+            if (len <= 0) await render();
+            else
                 for (let i = 0; i < len; i++) {
                     const p = settings.cast[i];
                     if (!p) continue;
 
-                    await redrawParticipant(i, p);
+                    await drawCastMember(i, p);
                 }
-            else await handleDraw();
-        } else if (app.isInMeeting()) await start();
+        }
     }
 
     // sync the UI color
@@ -492,7 +477,7 @@ app.sdk.onMessage(async ({ payload }) => {
             colorSel.value = Object.keys(colors)[idx];
         }
 
-        if (app.isImmersive()) await handleDraw();
+        if (app.isImmersive) await render();
         else document.body.style.backgroundColor = settings.color;
     }
 
@@ -502,7 +487,7 @@ app.sdk.onMessage(async ({ payload }) => {
     // set the default topic
     if (activeTopic) {
         setTopic(topicIndex, activeTopic);
-        if (app.isImmersive()) await redrawText();
+        if (app.isImmersive) await drawTopic();
     }
 });
 
@@ -517,19 +502,19 @@ colorSel.onchange = async (e) => {
     settings.color = color;
     document.body.style.backgroundColor = color;
 
+    // sync the color change with the Zoom Client
+    await app.sdk.postMessage({
+        color,
+    });
+
     // the host can override the color for everyone else
     socket.emit('sendUpdate', {
         color: settings.color,
         meetingUUID: settings.uuid,
     });
-
-    // sync the color change with the Zoom Client
-    await app.sdk.postMessage({
-        color,
-    });
 };
 
-custColorInp.onchange = debounce(async (e) => {
+custColorInp.onchange = async (e) => {
     const { value } = e.target;
     if (value.length > 0) {
         settings.color = value;
@@ -547,10 +532,8 @@ custColorInp.onchange = debounce(async (e) => {
                 color: settings.color,
                 meetingUUID: settings.uuid,
             });
-    } else {
-        colorSel.removeAttribute('disabled');
-    }
-}, 1000);
+    } else colorSel.removeAttribute('disabled');
+};
 
 topicBtn.onclick = async () => {
     const topic = topicInp.value;
@@ -565,7 +548,7 @@ topicBtn.onclick = async () => {
 
 setCastBtn.onclick = async () => {
     const selected = castSel.querySelectorAll('option:checked');
-    const hasImages = app.drawnImages.length > 0;
+    const hasUI = app.drawnImages.length > 0;
 
     const cast = [];
 
@@ -577,16 +560,17 @@ setCastBtn.onclick = async () => {
         cast.push(id);
 
         // only redraw the participant if we have the UI
-        if (app.isImmersive() && hasImages) await redrawParticipant(i, id);
+        if (hasUI) await drawCastMember(i, id);
     }
 
     settings.cast = cast;
 
+    const updateCast = settings.cast;
+
     // determine what needs to be redrawn based on the running context
-    if (app.isImmersive() && !hasImages) await handleDraw();
-    else if (app.isInMeeting()) await start();
-    else if (app.isInClient())
-        await app.sdk.postMessage({ updateCast: settings.cast });
+    if (app.isInMeeting) await start();
+    else if (app.isImmersive && !hasUI) await render();
+    else if (app.isInClient) await app.sdk.postMessage({ updateCast });
 
     // share this change with the other clients
     socket.emit('sendUpdate', {
@@ -597,13 +581,13 @@ setCastBtn.onclick = async () => {
     });
 };
 
-window.onresize = debounce(handleDraw, 1000);
+window.onresize = debounce(render, 1000);
 
 try {
     // Initialize the Zoom JS SDK
     await app.init();
 
-    if (!app.isInClient()) {
+    if (!app.isInClient) {
         const { meetingUUID } = await app.sdk.getMeetingUUID();
         settings.uuid = meetingUUID;
 
@@ -611,7 +595,7 @@ try {
         await app.sdk.connect();
 
         if (!app.userIsHost) {
-            socket.on('update', handleUpdate);
+            socket.on('update', onUpdate);
             socket.emit('join', { meetingUUID: settings.uuid });
         }
     }

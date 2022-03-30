@@ -4,6 +4,8 @@ class ImmersiveApp {
     static #instance;
     #sdk = zoomSdk;
 
+    #participants = [];
+
     #user = {
         participantId: null,
         role: null,
@@ -16,9 +18,10 @@ class ImmersiveApp {
         height: 0,
     };
 
-    #drawnImages = [];
-    #drawnParticipants = [];
-    #participants = [];
+    #drawn = {
+        images: [],
+        participants: [],
+    };
 
     #context = '';
     #contexts = {
@@ -33,9 +36,9 @@ class ImmersiveApp {
             if (!this.sdk)
                 throw new Error('Zoom App JS SDK is not loaded on the page');
 
-            this.sdk.onMyMediaChange(
-                async ({ media: video }) => (this.video = video)
-            );
+            this.sdk.onMyMediaChange(async ({ media: video }) => {
+                this.video = video;
+            });
 
             ImmersiveApp.#instance = this;
         }
@@ -66,27 +69,39 @@ class ImmersiveApp {
     }
 
     get drawnImages() {
-        return this.#drawnImages;
-    }
-
-    get userIsHost() {
-        return this.user.role === 'host';
+        return this.#drawn.images;
     }
 
     get drawnParticipants() {
-        return this.#drawnParticipants;
+        return this.#drawn.participants;
     }
 
     get user() {
         return this.#user;
     }
 
-    set user({ participantId, role, screenName }) {
+    set user({ role, screenName, participantId }) {
         this.#user = {
             role,
             screenName,
             participantId,
         };
+    }
+
+    get isInMeeting() {
+        return this.#context === this.#contexts.inMeeting;
+    }
+
+    get isInClient() {
+        return this.#context === this.#contexts.inClient;
+    }
+
+    get isImmersive() {
+        return this.#context === this.#contexts.inImmersive;
+    }
+
+    get userIsHost() {
+        return this.#user.role === 'host';
     }
 
     async init() {
@@ -118,8 +133,8 @@ class ImmersiveApp {
 
         this.#context = conf.runningContext;
 
-        if (this.isInMeeting()) {
-            this.user = await this.sdk.getUserContext();
+        if (this.isInMeeting) {
+            this.#user = await this.sdk.getUserContext();
 
             if (this.userIsHost) {
                 const { participants } =
@@ -140,10 +155,12 @@ class ImmersiveApp {
 
     async start() {
         // check that we're running as the host
-        if (!this.userIsHost) return;
+        if (!this.userIsHost)
+            throw new Error('Only the host can start Immersive Mode');
 
         // check that we're in a meeting
-        if (!this.isInMeeting()) return;
+        if (!this.isInMeeting)
+            throw new Error('Immersive Mode can only be used in meetings');
 
         // Start rendering Immersive Mode
         await this.sdk.runRenderingContext({ view: 'immersive' });
@@ -158,57 +175,45 @@ class ImmersiveApp {
         return this.#context;
     }
 
-    isInMeeting() {
-        return this.#context === this.#contexts.inMeeting;
-    }
-
-    isInClient() {
-        return this.#context === this.#contexts.inClient;
-    }
-
-    isImmersive() {
-        return this.#context === this.#contexts.inImmersive;
-    }
-
     async drawParticipant(options) {
         const res = await this.sdk.drawParticipant(options);
 
-        this.#drawnParticipants.push(options.participantId);
+        this.#drawn.participants.push(options.participantId);
 
         return res;
     }
 
     async drawImage(options) {
         const { imageId } = await this.sdk.drawImage(options);
-        this.#drawnImages.push(imageId);
+        this.#drawn.images.push(imageId);
 
         return imageId;
     }
 
     async clearImage(imageId) {
-        const i = this.#drawnImages.indexOf(imageId);
-        this.#drawnImages.splice(i, 1);
+        const i = this.#drawn.images.indexOf(imageId);
+        this.#drawn.images.splice(i, 1);
 
         return this.sdk.clearImage({ imageId });
     }
 
     async clearAllImages() {
-        while (this.#drawnImages.length > 0) {
-            const imageId = this.#drawnImages.pop();
+        while (this.#drawn.images.length > 0) {
+            const imageId = this.#drawn.images.pop();
             await this.sdk.clearImage({ imageId });
         }
     }
 
     async clearAllParticipants() {
-        while (this.#drawnParticipants.length > 0) {
-            const participantId = this.#drawnParticipants.pop();
+        while (this.#drawn.participants.length > 0) {
+            const participantId = this.#drawn.participants.pop();
             await this.sdk.clearParticipant({ participantId });
         }
     }
 
     async clearParticipant(participantId) {
-        const i = this.#drawnParticipants.indexOf(participantId);
-        this.#drawnParticipants.splice(i, 1);
+        const i = this.#drawn.participants.indexOf(participantId);
+        this.#drawn.participants.splice(i, 1);
 
         return this.sdk.clearParticipant({ participantId });
     }

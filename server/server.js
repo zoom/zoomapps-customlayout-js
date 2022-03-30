@@ -5,37 +5,36 @@ import { appName } from '../config.js';
 
 const dbg = debug(`${appName}:http`);
 const dbgWS = debug(`${appName}:socket-io`);
+
+// we'll store rooms in a map for the sample - you could also use MongoDB
 const rooms = new Map();
 
-/**
- * Initialize the socket.io websocket handler
- * @param {Server} server HTTP Server
- */
-function startWS(server) {
-    // make sure to version our protocol
-
-    const io = new Server(server, {
-        transports: ['websocket'], // disable HTTP long-polling
-        maxHttpBufferSize: 1e8,
-        pingTimeout: 60000,
+function err(socket, code, message) {
+    dbgWS('error', `[${code}] ${message}`);
+    socket.emit('error', {
+        code,
+        message,
     });
+}
 
-    io.on('connection', (socket) => {
+function checkUUID(socket, uuid) {
+    const isUUID = uuid && typeof uuid === 'string';
+
+    if (!isUUID) err(socket, 400, 'Meeting UUID cannot be blank');
+
+    return isUUID;
+}
+
+function onConnection(io) {
+    return (socket) => {
         let room;
 
         socket.on('join', ({ meetingUUID }) => {
-            dbg('client evt', meetingUUID);
-
-            if (!meetingUUID)
-                socket.emit('error', {
-                    message: 'Meeting UUID cannot be blank',
-                    code: 400,
-                });
+            if (!checkUUID(socket, meetingUUID)) return;
 
             if (!room) {
                 room = meetingUUID;
                 socket.join(room);
-                dbgWS(`${socket.id} joined room ${room}`);
             }
 
             if (rooms.has(room))
@@ -45,23 +44,14 @@ function startWS(server) {
         socket.on(
             'sendUpdate',
             ({ participants, topic, color, meetingUUID }) => {
-                if (!meetingUUID) {
-                    const message = 'Meeting UUID cannot be blank';
-                    dbgWS('error', message);
-                    return socket.emit('error', {
-                        message,
-                        code: 400,
-                    });
-                }
+                if (!checkUUID(socket, meetingUUID)) return;
 
                 if (!room) {
                     room = meetingUUID;
                     socket.join(room);
                 }
 
-                let data = {};
-                const roomExists = rooms.has(room);
-                if (roomExists) data = rooms.get(room);
+                const data = rooms.has(room) ? rooms.get(room) : {};
 
                 const changes = {
                     topic: topic && data.topic !== topic,
@@ -76,13 +66,24 @@ function startWS(server) {
                 if (changes.color) data.color = color;
 
                 rooms.set(room, data);
-                dbgWS(
-                    `sending update from socket ${socket.id} to room ${room}`
-                );
                 socket.to(room).emit('update', data);
             }
         );
+    };
+}
+
+/**
+ * Initialize the socket.io websocket handler
+ * @param {Server} server HTTP Server
+ */
+function startWS(server) {
+    const io = new Server(server, {
+        transports: ['websocket'],
+        maxHttpBufferSize: 1e8,
+        pingTimeout: 60000,
     });
+
+    io.on('connection', onConnection(io));
 }
 
 /**
