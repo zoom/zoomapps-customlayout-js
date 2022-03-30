@@ -80,14 +80,6 @@ class ImmersiveApp {
         return this.#user;
     }
 
-    set user({ role, screenName, participantId }) {
-        this.#user = {
-            role,
-            screenName,
-            participantId,
-        };
-    }
-
     get isInMeeting() {
         return this.#context === this.#contexts.inMeeting;
     }
