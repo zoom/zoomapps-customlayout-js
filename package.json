@@ -6,16 +6,20 @@
   "private": true,
   "scripts": {
     "start": "node app.js",
-    "dev": "docker compose up zoom-app",
-    "predev": "chmod +x ./gen-secrets.sh && $_",
-    "build": "docker build --build-arg NODE_ENV=production -t zoom-app .",
+    "prestart": "npm run build",
+    "dev-app": "npm run build -- --watch",
+    "dev-server": "nodemon -q app.js",
+    "build": "babel public --out-dir dist --ignore '**/vendor/*.js' --copy-files",
+    "dev": "concurrently -kn dev- -c inverse.magenta,inverse.green npm:dev-*",
+    "postprepare": "chmod +x ./gen-secrets.sh && $_",
+    "predev": "docker compose up -d",
     "prepare": "npx husky install",
-    "preprepare": "[ -d .git ] && [ -f .env ] && git update-index --assume-unchanged .env || true",
-    "clean": "docker compose down -v --remove-orphans --rmi local"
+    "clean": "docker compose down -v --remove-orphans"
   },
   "dependencies": {
     "axios": "^0.26.0",
     "compression": "^1.7.4",
+    "concurrently": "^7.1.0",
     "connect-mongo": "^4.6.0",
     "cookie-parser": "~1.4.6",
     "debug": "~4.3.3",
@@ -31,15 +35,31 @@
     "mongoose-encryption": "^2.1.2",
     "morgan": "~1.10.0",
     "pug": "^3.0.2",
-    "socket.io": "^4.4.1"
+    "socket.io": "^4.4.1",
+    "nodemon": "^2.0.15"
   },
   "devDependencies": {
+    "@babel/cli": "^7.17.6",
+    "@babel/core": "^7.17.9",
+    "@babel/preset-env": "^7.16.11",
+    "babel-watch": "^7.7.0",
     "eslint": "^8.9.0",
     "eslint-config-prettier": "^8.4.0",
     "husky": "^7.0.4",
     "lint-staged": "^12.3.4",
     "prettier": "^2.5.1"
   },
+  "babel": {
+    "presets": [
+      "@babel/preset-env"
+    ]
+  },
+  "browserslist": [
+    "> 1%",
+    "last 3 versions",
+    "not dead",
+    "not ie 11"
+  ],
   "lint-staged": {
     "*.js": [
       "eslint --cache --fix",
