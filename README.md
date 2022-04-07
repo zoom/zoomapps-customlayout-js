@@ -79,7 +79,6 @@ Choose these features from the Zoom JS SDK section of the Features tab:
 To get started clone the repo:
 
 ```shell
-<<<<<<< HEAD
 git clone https://github.com/zoom/immersive-za-sample.git
 ```
 
