@@ -583,24 +583,26 @@ setCastBtn.onclick = async () => {
 
 window.onresize = debounce(render, 1000);
 
-try {
-    // Initialize the Zoom JS SDK
-    await app.init();
+(async () => {
+    try {
+        // Initialize the Zoom JS SDK
+        await app.init();
 
-    if (!app.isInClient) {
-        const { meetingUUID } = await app.sdk.getMeetingUUID();
-        settings.uuid = meetingUUID;
+        if (!app.isInClient) {
+            const { meetingUUID } = await app.sdk.getMeetingUUID();
+            settings.uuid = meetingUUID;
 
-        // connect to the Zoom Client
-        await app.sdk.connect();
+            // connect to the Zoom Client
+            await app.sdk.connect();
 
-        if (!app.userIsHost) {
-            socket.on('update', onUpdate);
-            socket.emit('join', { meetingUUID: settings.uuid });
+            if (!app.userIsHost) {
+                socket.on('update', onUpdate);
+                socket.emit('join', { meetingUUID: settings.uuid });
+            }
         }
-    }
 
-    showElements();
-} catch (e) {
-    console.error(e);
-}
+        showElements();
+    } catch (e) {
+        console.error(e);
+    }
+})();
