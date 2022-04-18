@@ -175,7 +175,7 @@ async function drawTopic() {
 }
 
 /**
- * Redraw a single participant
+ * Redraw one of the displayed participants
  * @param {Number} idx - index of the participant (0-2)
  * @param {String} p - participant ID
  * @return {Promise<void>}
