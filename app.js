@@ -2,41 +2,23 @@ import express from 'express';
 import axios from 'axios';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import crypto from 'crypto';
-import db from './server/db.js';
 import debug from 'debug';
 import helmet from 'helmet';
 import logger from 'morgan';
-import session from 'express-session';
 import { URL } from 'url';
 
 import { start } from './server/server.js';
 import indexRoutes from './server/routes/index.js';
 import authRoutes from './server/routes/auth.js';
 
-import {
-    appName,
-    mongoURL,
-    port,
-    redirectUri,
-    sessionSecret,
-} from './config.js';
+import { appName, port, redirectUri } from './config.js';
 
 const dirname = (path) => new URL(path, import.meta.url).pathname;
-
-// connect to MongoDB
-await db.connect(mongoURL);
-
-process.on('SIGINT', async () => {
-    await db.disconnect();
-    process.exit(1);
-});
 
 /* App Config */
 const app = express();
 const dbg = debug(`${appName}:app`);
 
-// CSP directives
 const redirectHost = new URL(redirectUri).host;
 
 // views and assets
@@ -72,12 +54,6 @@ axios.interceptors.request.use(logFunc);
 axios.interceptors.response.use(logFunc);
 
 /*  Middleware */
-// generate a nonce for inlining scripts and styles
-app.use((req, res, next) => {
-    res.locals.cspNonce = crypto.randomBytes(16).toString('hex');
-    next();
-});
-
 const headers = {
     frameguard: {
         action: 'sameorigin',
@@ -113,22 +89,6 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(logger('dev', { stream: { write: (msg) => dbg(msg) } }));
 
-app.use(
-    session({
-        secret: sessionSecret,
-        resave: false,
-        saveUninitialized: true,
-        cookie: {
-            path: '/',
-            httpOnly: true,
-            secure: true,
-            sameSite: true,
-            maxAge: 365 * 24 * 60 * 60 * 1000,
-        },
-        store: db.createStore(),
-    })
-);
-
 // serve our app folder
 app.use(express.static(staticDir));
 
@@ -158,7 +118,6 @@ app.get('*', (req, res) => res.redirect('/'));
 // start serving
 start(app, port).catch(async (e) => {
     console.error(e);
-    await db.disconnect();
     process.exit(1);
 });
 

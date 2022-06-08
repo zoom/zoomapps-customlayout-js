@@ -1,23 +1,15 @@
-import dotenv from 'dotenv';
-import dotenvExpand from 'dotenv-expand';
-
+const isProd = process.env.NODE_ENV === 'production';
 const deps = [
     'ZM_CLIENT_ID',
     'ZM_CLIENT_SECRET',
     'ZM_REDIRECT_URL',
-    'ZM_HOST',
     'SESSION_SECRET',
-    'MONGO_USER',
-    'MONGO_PASS',
-    'MONGO_URL',
-    'MONGO_KEY',
-    'MONGO_SIGN',
 ];
 
-const env = dotenv.config();
+let dotenv;
+if (!isProd) dotenv = await import('dotenv');
 
-// Replace MongoDB connection string templates
-const config = dotenvExpand.expand(env).parsed;
+const config = isProd ? process.env : dotenv?.config().parsed;
 
 // Check that we have all our config dependencies
 let hasMissing = !config;
@@ -31,40 +23,32 @@ for (const dep in deps) {
     }
 }
 
-if (hasMissing) {
-    console.error('Missing required .env values...exiting');
-    process.exit(1);
+if (hasMissing) throw new Error('Missing required .env values...exiting');
+
+try {
+    new URL(config.ZM_REDIRECT_URL);
+} catch (e) {
+    throw new Error(`Invalid ZM_REDIRECT_URL: ${e.message}`);
 }
 
-const p = config.PORT || process.env.PORT;
-
 export const zoomApp = {
-    name: config.APP_NAME || 'zoom-app',
-    host: config.ZM_HOST,
+    host: config.ZM_HOST || 'https://zoom.us',
     clientId: config.ZM_CLIENT_ID,
     clientSecret: config.ZM_CLIENT_SECRET,
-    redirectUri: config.ZM_REDIRECT_URL,
+    redirectUrl: config.ZM_REDIRECT_URL,
+    sessionSecret: config.SESSION_SECRET,
 };
 
 // Zoom App Info
-export const appName = zoomApp.name;
-export const redirectUri = zoomApp.redirectUri;
-
-// MongoDB Session
-export const sessionSecret = config.SESSION_SECRET;
-
-// MongoDB and Mongoose
-export const mongoURL = config.MONGO_URL;
-export const encryptionKey = config.MONGO_KEY;
-export const signingKey = config.MONGO_SIGN;
+export const appName = config.APP_NAME || 'hello-zoom';
+export const redirectUri = zoomApp.redirectUrl;
 
 // HTTP
-export const port = p || '3000';
+export const port = config.PORT || '3000';
 
 // require secrets are explicitly imported
 export default {
     appName,
     redirectUri,
     port,
-    mongoURL,
 };
