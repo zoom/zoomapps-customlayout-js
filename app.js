@@ -63,17 +63,12 @@ const headers = {
         maxAge: 31536000,
     },
     referrerPolicy: 'same-origin',
+    crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
         directives: {
             'default-src': 'self',
-            styleSrc: [
-                "'self'",
-                (req, res) => `'nonce-${res.locals.cspNonce}'`,
-            ],
-            scriptSrc: [
-                "'self'",
-                (req, res) => `'nonce-${res.locals.cspNonce}'`,
-            ],
+            styleSrc: ["'self'"],
+            scriptSrc: ["'self'", 'https://appssdk.zoom.us/sdk.min.js'],
             imgSrc: ["'self'", `https://${redirectHost}`],
             'connect-src': ["'self'", `wss://${redirectHost}`],
             'base-uri': 'self',
