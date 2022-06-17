@@ -600,7 +600,6 @@ window.onresize = debounce(render, 1000);
                 socket.emit('join', { meetingUUID: settings.uuid });
             }
         }
-
         showElements();
     } catch (e) {
         console.error(e);
