@@ -6,7 +6,6 @@ This Node + Express.js. app is an example of how you can use the Zoom Layers API
 captivates your audience and presenters alike.
 
 ## Prerequisites
-
 1. [Node JS](https://nodejs.org/en/)
 2. [Ngrok](https://ngrok.com)
 3. [Zoom Account](https://support.zoom.us/hc/en-us/articles/207278726-Plan-Types-)
