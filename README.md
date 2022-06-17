@@ -6,6 +6,7 @@ This Node + Express.js. app is an example of how you can use the Zoom Layers API
 captivates your audience and presenters alike.
 
 ## Prerequisites
+
 1. [Node JS](https://nodejs.org/en/)
 2. [Ngrok](https://ngrok.com)
 3. [Zoom Account](https://support.zoom.us/hc/en-us/articles/207278726-Plan-Types-)
@@ -13,7 +14,7 @@ captivates your audience and presenters alike.
     1. Client ID
     2. Client Secret
     3. Redirect URL
-    
+
 ## Installation
 
 To get started clone the repo:
@@ -44,24 +45,29 @@ $ ngrok http 3000
 ```
 
 ## Zoom Marketplace Configuration
+
 Follow the steps below to configure your Zoom App within the Zoom Marketplace. For further instructions,
 see [this video series]() on how to create and configure these sample Zoom Apps.
 
 ### Create your Zoom App
+
 You can follow [this guide](https://marketplace.zoom.us/docs/beta-docs/zoom-apps/createazoomapp) to create a Zoom App
 with the [Zoom Marketplace](https://marketplace.zoom.us/).
 
 ### Client ID and Client Secret
+
 Once your app is created, you can obtain your Client ID and Client Secret from the App Credentials tab of your Zoom App.
 
 ### Home URL and Redirect URL
+
 Use the Ngrok URL to configure your Zoom App on the Zoom Marketplace with the following information:
 
 1. Home Page: `https://example.ngrok.io`
 2. Redirect URL: `https://example.ngrok.io/auth`
 
 ### Features Tab
-Click the Add APIs button under this section Choose these features from the Zoom JS SDK section of the Features tab:
+
+Click the Add APIs button under the Zoom JS SDK section choose these APIs:
 
 - clearImage,
 - clearParticipant,
@@ -83,13 +89,15 @@ Click the Add APIs button under this section Choose these features from the Zoom
 - sendAppInvitationToAllParticipants
 
 ### Scopes Tab
+
 On the Scopes tab Select the following OAuth scopes from the Scopes tab:
 
 - zoomapp:inmeeting
 
 ### Zoom App Secrets
-Fill out the [.env](.env) file with your **Client ID**, **Client Secret** and **Redirect URI** from your Zoom
-App. No other fields need to be updated for development and many will be generated in the next section.
+
+Fill out the [.env](.env) file with your **Client ID**, **Client Secret** and **Redirect URI** from your Zoom App. No
+other fields need to be updated for development and many will be generated in the next section.
 
 ```dotenv
 ZM_CLIENT_ID=...
@@ -98,17 +106,20 @@ ZM_REDIRECT_URL=...
 ```
 
 #### Zoom for Government
-If you are a [ZfG](https://www.zoomgov.com/) customer you can set the `ZM_HOST` environment variable to change the base URL used for
-Zoom. This will allow you to adjust to the different Marketplace and API Base URLs used by ZfG customers.
+
+If you are a [ZfG](https://www.zoomgov.com/) customer you can set the `ZM_HOST` environment variable to change the base
+URL used for Zoom. This will allow you to adjust to the different Marketplace and API Base URLs used by ZfG customers.
 
 **Marketplace URL:** marketplace.*zoomgov.com*
 
 **API Base URL:** api.*zoomgov.com*
 
 ## Start the App
+
 To test out the app, start in development mode
 
 ### Development
+
 Start the server in development mode and watch for changes
 
 ```shell
@@ -122,6 +133,7 @@ The `dev` script will:
 4. Start the application
 
 ### Production
+
 When running your application in production no logs are sent to the console by default and the server is not restarted
 on file changes.
 
@@ -134,6 +146,7 @@ $ NODE_ENV=production npm start
 ````
 
 ## Usage
+
 Install the Zoom App for your user:
 
 1. Navigate to your application on the [Zoom Marketplace](https://marketplace.zoom.us) and Click **Install**
@@ -141,6 +154,7 @@ Install the Zoom App for your user:
    install' link
 
 ## Deployment
+
 You can deploy this server on any service that allows you to host dynamic Node.js apps. You'll first want to make sure
 that you've configured a MongoDB server to connect to.
 
@@ -149,9 +163,11 @@ that you've configured a MongoDB server to connect to.
 3. [AWS](https://aws.amazon.com/getting-started/hands-on/deploy-nodejs-web-app/)
 
 ## Contribution
+
 We do not accept pull requests at this time.
 
 ### Keeping secrets secret
+
 This application makes use of your Zoom App Client ID and Client Secret as well as a custom secret for signing session
 cookies. During development, the application will read from the .env file. ;
 
@@ -163,13 +179,16 @@ re using instead of within the .env file. This might include using a secret mana
 > :warning: **Never commit your .env file to version control:** The file likely contains Zoom App Credentials and Session Secrets
 
 ### Code Style
+
 This project uses prettier and eslint to enforce style and protect against coding errors along with a pre-commit git
 hook ([husky](https://typicode.github.io/husky/#/)) to ensure files pass checks prior to commit.
 
 ### Testing
+
 At this time there are no e2e or unit tests.
 
 ## Need help?
+
 If you're looking for help, try [Developer Support](https://devsupport.zoom.us) or
 our [Developer Forum](https://devforum.zoom.us). Priority support is also available
 with [Premier Developer Support](https://zoom.us/docs/en-us/developer-support-plans.html) plans.
