@@ -1,0 +1,25 @@
+extends layout
+include mixins/prompt-install
+
+block content
+    if isZoom
+        .is-hidden#main
+            h1.title.has-text-centered.is-size-5-mobile.pb-6 Immersive Zoom App Sample
+            h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
+            .columns
+                .column
+                    include includes/controls
+            .columns
+                .column
+                    include includes/host-controls
+
+        canvas#uiCanvas
+        img#logo(src='/img/zoom.png')
+    else
+        +prompt-install(title, installURL)
+
+append scripts
+    if isZoom
+        script(src='https://appssdk.zoom.us/sdk.min.js')
+        script(type="module" src='/js/bundle.mjs')
+        script(nomodule src='/js/bundle.js')

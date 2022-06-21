@@ -1,0 +1,46 @@
+@import 'vendor/bulma.min.css';
+
+html, body {
+    min-height: 100vh;
+    -ms-overflow-style: none;
+    overflow-y: scroll;
+}
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+#logo {
+    display: none;
+}
+
+#uiCanvas {
+    position:fixed;
+    left:0;
+    top:0;
+    width:0;
+    height:0;
+}
+
+#topicInp {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#topicList {
+    min-height: 1rem;
+}
+
+.input, .select select, .panel {
+    border-radius: 10px ;
+}
+
+button.button.is-primary {
+    background: #0E72Ed;
+    border-radius: 10px;
+}
+
+button.button.is-primary:hover {
+    background: #0E72Ed;
+}
+
