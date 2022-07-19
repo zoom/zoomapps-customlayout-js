@@ -274,10 +274,7 @@ function showElements() {
     if (app.isImmersive) {
         style.overflow = 'hidden';
         hideEl(content);
-    } else
-        showEl(content);
-
-
+    } else showEl(content);
 
     if (app.isInMeeting) {
         if (app.userIsHost) {
@@ -399,7 +396,7 @@ app.sdk.onParticipantChange(async ({ participants }) => {
         } else app.participants.push(p);
     }
 
-    app.sdk.postMessage({ participants: app.participants });
+    await app.sdk.postMessage({ participants: app.participants });
     setCastSelect(app.participants);
 });
 
