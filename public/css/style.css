@@ -21,3 +21,26 @@ body::-webkit-scrollbar {
     width:0;
     height:0;
 }
+
+#topicInp {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#topicList {
+    min-height: 1rem;
+}
+
+.input, .select select, .panel {
+    border-radius: 10px ;
+}
+
+button.button.is-primary {
+    background: #0E72Ed;
+    border-radius: 10px;
+}
+
+button.button.is-primary:hover {
+    background: #0E72Ed;
+}
+

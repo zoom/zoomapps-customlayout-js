@@ -4,10 +4,15 @@ include mixins/prompt-install
 block content
     if isZoom
         .is-hidden#main
-            h1.title.has-text-centered Immersive Zoom App Sample
+            h1.title.has-text-centered.is-size-5-mobile.pb-6 Immersive Zoom App Sample
             h2.subtitle.has-text-centered#helpMsg Start a meeting to use this app
-            include includes/controls
-            include includes/host-controls
+            .columns
+                .column
+                    include includes/controls
+            .columns
+                .column
+                    include includes/host-controls
+
         canvas#uiCanvas
         img#logo(src='/img/zoom.png')
     else

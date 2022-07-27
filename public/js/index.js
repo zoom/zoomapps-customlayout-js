@@ -3,13 +3,11 @@ import socket from './lib/socket.js';
 import { draw, drawQuadrant } from './lib/canvas.js';
 
 const colors = {
-    black: '#0a0a0a',
-    blue: '#2D8CFF',
-    green: '#48c774',
-    grey: '#b5b5b5',
-    red: '#ff3860',
-    white: '#fff',
-    yellow: '#ffdd57',
+    black: '#131619',
+    blue: '#0e72ed',
+    green: '#4b9d64',
+    red: '#e8173d',
+    yellow: '#ffbf39',
 };
 
 const settings = {
@@ -62,6 +60,7 @@ function showEl(el) {
  * @param {Element} el - element to show
  */
 function hideEl(el) {
+    el.classList.add(classes.hidden);
     el.classList.add(classes.hidden);
 }
 
@@ -272,15 +271,10 @@ function setCastSelect(participants) {
  */
 function showElements() {
     const { style } = document.body;
-
     if (app.isImmersive) {
-        style.backgroundColor = 'white';
         style.overflow = 'hidden';
         hideEl(content);
-    } else {
-        style.backgroundColor = settings.color;
-        showEl(content);
-    }
+    } else showEl(content);
 
     if (app.isInMeeting) {
         if (app.userIsHost) {
@@ -402,7 +396,7 @@ app.sdk.onParticipantChange(async ({ participants }) => {
         } else app.participants.push(p);
     }
 
-    app.sdk.postMessage({ participants: app.participants });
+    await app.sdk.postMessage({ participants: app.participants });
     setCastSelect(app.participants);
 });
 
@@ -478,7 +472,6 @@ app.sdk.onMessage(async ({ payload }) => {
         }
 
         if (app.isImmersive) await render();
-        else document.body.style.backgroundColor = settings.color;
     }
 
     // sync a new topic
@@ -500,7 +493,6 @@ colorSel.onchange = async (e) => {
     if (!color) return;
 
     settings.color = color;
-    document.body.style.backgroundColor = color;
 
     // sync the color change with the Zoom Client
     await app.sdk.postMessage({
@@ -518,7 +510,6 @@ custColorInp.onchange = async (e) => {
     const { value } = e.target;
     if (value.length > 0) {
         settings.color = value;
-        document.body.style.backgroundColor = value;
 
         colorSel.setAttribute('disabled', '');
 
