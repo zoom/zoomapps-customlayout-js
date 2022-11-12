@@ -19,7 +19,7 @@ Open your terminal:
 
 ```bash
 # Clone down this repository
-git clone git@github.com/zoom/zoomapps-customlayout-js
+git clone git@github.com:zoom/zoomapps-customlayout-js.git
 
 # navigate into the cloned project directory
 cd zoomapps-customlayout-js
