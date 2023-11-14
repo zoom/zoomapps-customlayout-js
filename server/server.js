@@ -55,7 +55,7 @@ function onConnection(io) {
 
                 const changes = {
                     topic: topic && data.topic !== topic,
-                    participants: participants && data.participants !== topic,
+                    participants: participants && data.participants !== participants,
                     color: color && data.color !== color,
                 };
 
